@@ -21,6 +21,7 @@ from datetime import datetime
 
 import chromedriver_autoinstaller_max
 import requests
+import yes_captcha
 from selenium import webdriver
 from selenium.common.exceptions import (NoAlertPresentException,
                                         NoSuchWindowException,
@@ -3194,6 +3195,7 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
     show_debug_message = False      # online
 
     ocr_answer = None
+    print("ocr", ocr)
     if not ocr is None:
         img_base64 = None
 
@@ -3228,8 +3230,9 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
                         callback(canvas.toDataURL()); }
                         """ % (image_id))
                     if not form_verifyCode_base64 is None:
-                        img_base64 = base64.b64decode(form_verifyCode_base64.split(',')[1])
-
+                        # print("form_verifyCode_base64:", form_verifyCode_base64)
+                        # img_base64 = base64.b64decode(form_verifyCode_base64.split(',')[1])
+                        img_base64 = form_verifyCode_base64.split(',')[1]
                     if img_base64 is None:
                         if not Captcha_Browser is None:
                             print("canvas get image fail, use plan_b: NonBrowser")
@@ -3241,7 +3244,8 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
 
         if not img_base64 is None:
             try:
-                ocr_answer = ocr.classification(img_base64)
+                # ocr_answer = ocr.classification(img_base64)
+                ocr_answer = yes_captcha.image_to_text(img_base64)
             except Exception as exc:
                 pass
 
@@ -3503,12 +3507,12 @@ def tixcraft_assign_ticket_number(driver, config_dict):
 
 
 def tixcraft_ticket_main(driver, config_dict, ocr, Captcha_Browser, domain_name):
-    is_agree_at_webdriver = False
-    if not config_dict["browser"] in CONST_CHROME_FAMILY:
-        is_agree_at_webdriver = True
-    else:
-        if not config_dict["advanced"]["chrome_extension"]:
-            is_agree_at_webdriver = True
+    is_agree_at_webdriver = True
+    # if not config_dict["browser"] in CONST_CHROME_FAMILY:
+    #     is_agree_at_webdriver = True
+    # else:
+    #     if not config_dict["advanced"]["chrome_extension"]:
+    #         is_agree_at_webdriver = True
     if is_agree_at_webdriver:
         # use extension instead of selenium.
         # checkbox javascrit code at chrome extension.

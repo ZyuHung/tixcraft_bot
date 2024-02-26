@@ -2,7 +2,7 @@
     "homepage": "https://tixcraft.com",
     "browser": "chrome",
     "language": "\u7e41\u9ad4\u4e2d\u6587",
-    "ticket_number": 2,
+    "ticket_number": 1,
     "ocr_captcha": {
         "enable": true,
         "beta": true,
@@ -13,12 +13,12 @@
     "date_auto_select": {
         "enable": true,
         "date_keyword": "",
-        "mode": "random"
+        "mode": "from top to bottom"
     },
     "area_auto_select": {
         "enable": true,
-        "mode": "random",
-        "area_keyword": ""
+        "mode": "from top to bottom",
+        "area_keyword": "\"\u6416\u6efeA\",\"\u6416\u6efeB\u5340\",\"B\u53406800\",\"1C\u53406800\",\"6800\""
     },
     "keyword_exclude": "\"\u8f2a\u6905\",\"\u8eab\u969c\",\"\u8eab\u5fc3 \u969c\u7919\",\"Restricted View\",\"\u71c8\u67f1\u906e\u853d\",\"\u8996\u7dda\u4e0d\u5b8c\u6574\"",
     "kktix": {
@@ -34,7 +34,7 @@
             "enable": true,
             "filename": "ding-dong.wav"
         },
-        "tixcraft_sid": "",
+        "tixcraft_sid": "fCp/YHsgZ2Z/YSd2YCF3IHV9YXxze3hhJSI=",
         "ibonqware": "",
         "facebook_account": "",
         "kktix_account": "",
