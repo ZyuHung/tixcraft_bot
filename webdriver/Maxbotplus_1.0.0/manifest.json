@@ -239,6 +239,17 @@
         },
         {
             "matches": [
+                "https://orders.ibon.com.tw/application/UTK02/UTK0201_000.aspx?*"
+            ],
+            "run_at": "document_end",
+            "world": "MAIN",
+            "js": [
+                "jquery.min.js",
+                "js/ibon_area_front.js"
+            ]
+        },
+        {
+            "matches": [
                 "https://orders.ibon.com.tw/application/UTK02/UTK0201_001.aspx?PERFORMANCE_ID=*PERFORMANCE_PRICE_AREA_ID=*",
                 "https://orders.ibon.com.tw/application/UTK02/UTK0202_.aspx?PERFORMANCE_ID=*PERFORMANCE_PRICE_AREA_ID=*"
             ],
@@ -327,6 +338,20 @@
         },
         {
             "matches": [
+                "https://shows.cityline.com/tc/*",
+                "https://priority.cityline.com/tc/*",
+                "https://shows.cityline.com/en/*",
+                "https://priority.cityline.com/en/*"
+            ],
+            "run_at": "document_end",
+            "world": "MAIN",
+            "js": [
+                "jquery.min.js",
+                "js/cityline_shows_buy_front.js"
+            ]
+        },
+        {
+            "matches": [
                 "https://ticketplus.com.tw/activity/*"
             ],
             "run_at": "document_end",
@@ -388,5 +413,5 @@
             ]
         }
     ],
-    "version": "1.0.11"
+    "version": "1.0.14"
 }

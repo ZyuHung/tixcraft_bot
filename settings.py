@@ -12,6 +12,14 @@ except ImportError:
     import tkinter.font as tkfont
     from tkinter import messagebox
     from tkinter.filedialog import asksaveasfilename
+    '''
+    try:
+        import customtkinter
+        customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
+        customtkinter.set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
+    except Exception as exc:
+        pass
+    '''
 
 import asyncio
 import base64
@@ -40,7 +48,7 @@ try:
 except Exception as exc:
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.02.01)"
+CONST_APP_VERSION = "MaxBot (2024.02.07)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -713,6 +721,17 @@ def get_default_config():
     config_dict["advanced"]["udn_password"] = ""
     config_dict["advanced"]["ticketplus_password"] = ""
 
+    config_dict["advanced"]["facebook_password_plaintext"] = ""
+    config_dict["advanced"]["kktix_password_plaintext"] = ""
+    config_dict["advanced"]["fami_password_plaintext"] = ""
+    config_dict["advanced"]["urbtix_password_plaintext"] = ""
+    config_dict["advanced"]["cityline_password_plaintext"] = ""
+    config_dict["advanced"]["hkticketing_password_plaintext"] = ""
+    config_dict["advanced"]["kham_password_plaintext"] = ""
+    config_dict["advanced"]["ticket_password_plaintext"] = ""
+    config_dict["advanced"]["udn_password_plaintext"] = ""
+    config_dict["advanced"]["ticketplus_password_plaintext"] = ""
+
     config_dict["advanced"]["chrome_extension"] = True
     config_dict["advanced"]["disable_adjacent_seat"] = False
     config_dict["advanced"]["hide_some_image"] = False
@@ -1025,10 +1044,21 @@ def btn_save_act(language_code, slience_mode=False):
             config_dict["keyword_exclude"] = keyword_exclude
             config_dict["advanced"]["user_guess_string"] = user_guess_string
             config_dict["advanced"]["remote_url"] = remote_url
+            
             config_dict["advanced"]["idle_keyword"] = idle_keyword
             config_dict["advanced"]["resume_keyword"] = resume_keyword
             config_dict["advanced"]["idle_keyword_second"] = idle_keyword_second
             config_dict["advanced"]["resume_keyword_second"] = resume_keyword_second
+
+            txt_idle_keyword.delete(1.0, "end")
+            txt_resume_keyword.delete(1.0, "end")
+            txt_idle_keyword_second.delete(1.0, "end")
+            txt_resume_keyword_second.delete(1.0, "end")
+
+            txt_idle_keyword.insert("1.0", config_dict["advanced"]["idle_keyword"].strip())
+            txt_resume_keyword.insert("1.0", config_dict["advanced"]["resume_keyword"].strip())
+            txt_idle_keyword_second.insert("1.0", config_dict["advanced"]["idle_keyword_second"].strip())
+            txt_resume_keyword_second.insert("1.0", config_dict["advanced"]["resume_keyword_second"].strip())
 
     if is_all_data_correct:
         config_dict["area_auto_select"]["enable"] = bool(chk_state_area_auto_select.get())
@@ -1039,6 +1069,7 @@ def btn_save_act(language_code, slience_mode=False):
 
         config_dict["advanced"]["tixcraft_sid"] = txt_tixcraft_sid.get().strip()
         config_dict["advanced"]["ibonqware"] = txt_ibon_ibonqware.get().strip()
+        
         config_dict["advanced"]["facebook_account"] = txt_facebook_account.get().strip()
         config_dict["advanced"]["kktix_account"] = txt_kktix_account.get().strip()
         config_dict["advanced"]["fami_account"] = txt_fami_account.get().strip()
@@ -1061,8 +1092,9 @@ def btn_save_act(language_code, slience_mode=False):
         config_dict["advanced"]["udn_password"] = txt_udn_password.get().strip()
         config_dict["advanced"]["ticketplus_password"] = txt_ticketplus_password.get().strip()
 
-        config_dict["advanced"]["tixcraft_sid"] = encryptMe(config_dict["advanced"]["tixcraft_sid"])
-        config_dict["advanced"]["ibonqware"] = encryptMe(config_dict["advanced"]["ibonqware"])
+        config_dict["advanced"]["tixcraft_sid"] = config_dict["advanced"]["tixcraft_sid"]
+        config_dict["advanced"]["ibonqware"] = config_dict["advanced"]["ibonqware"]
+
         config_dict["advanced"]["facebook_password"] = encryptMe(config_dict["advanced"]["facebook_password"])
         config_dict["advanced"]["kktix_password"] = encryptMe(config_dict["advanced"]["kktix_password"])
         config_dict["advanced"]["fami_password"] = encryptMe(config_dict["advanced"]["fami_password"])
@@ -2389,7 +2421,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     lbl_tixcraft_sid.grid(column=0, row=group_row_count, sticky = E)
 
     global txt_tixcraft_sid
-    txt_tixcraft_sid_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["tixcraft_sid"].strip()))
+    txt_tixcraft_sid_value = StringVar(frame_group_header, value=config_dict["advanced"]["tixcraft_sid"].strip())
     txt_tixcraft_sid = Entry(frame_group_header, width=30, textvariable = txt_tixcraft_sid_value, show="*")
     txt_tixcraft_sid.grid(column=1, row=group_row_count, columnspan=2, sticky = W)
 
@@ -2400,7 +2432,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     lbl_ibon_ibonqware.grid(column=0, row=group_row_count, sticky = E)
 
     global txt_ibon_ibonqware
-    txt_ibon_ibonqware_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["ibonqware"].strip()))
+    txt_ibon_ibonqware_value = StringVar(frame_group_header, value=config_dict["advanced"]["ibonqware"].strip())
     txt_ibon_ibonqware = Entry(frame_group_header, width=30, textvariable = txt_ibon_ibonqware_value, show="*")
     txt_ibon_ibonqware.grid(column=1, row=group_row_count, columnspan=2, sticky = W)
 
@@ -2635,6 +2667,86 @@ def change_maxbot_status_by_keyword():
             #print("match to resume:", current_time)
             do_maxbot_resume()
 
+    check_maxbot_config_unsaved(config_dict)
+
+def check_maxbot_config_unsaved(config_dict):
+    # alert not saved config.
+    global combo_ticket_number
+    global txt_date_keyword
+    global txt_area_keyword
+    global txt_keyword_exclude
+
+    global txt_idle_keyword
+    global txt_resume_keyword
+    global txt_idle_keyword_second
+    global txt_resume_keyword_second
+
+    try:
+        date_keyword = txt_date_keyword.get("1.0",END).strip()
+        date_keyword = format_config_keyword_for_json(date_keyword)
+
+        area_keyword = txt_area_keyword.get("1.0",END).strip()
+        area_keyword = format_config_keyword_for_json(area_keyword)
+
+        keyword_exclude = txt_keyword_exclude.get("1.0",END).strip()
+        keyword_exclude = format_config_keyword_for_json(keyword_exclude)
+
+        idle_keyword = txt_idle_keyword.get("1.0",END).strip()
+        idle_keyword = format_config_keyword_for_json(idle_keyword)
+
+        resume_keyword = txt_resume_keyword.get("1.0",END).strip()
+        resume_keyword = format_config_keyword_for_json(resume_keyword)
+
+        idle_keyword_second = txt_idle_keyword_second.get("1.0",END).strip()
+        idle_keyword_second = format_config_keyword_for_json(idle_keyword_second)
+
+        resume_keyword_second = txt_resume_keyword_second.get("1.0",END).strip()
+        resume_keyword_second = format_config_keyword_for_json(resume_keyword_second)
+
+        highlightthickness = 0
+        if len(combo_ticket_number.get().strip())>0:
+            if config_dict["ticket_number"] != int(combo_ticket_number.get().strip()):
+                highlightthickness = 2
+        #combo_ticket_number.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["date_auto_select"]["date_keyword"] != date_keyword:
+            highlightthickness = 2
+        txt_date_keyword.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["area_auto_select"]["area_keyword"] != area_keyword:
+            highlightthickness = 2
+        txt_area_keyword.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["keyword_exclude"] != keyword_exclude:
+            highlightthickness = 2
+        txt_keyword_exclude.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["advanced"]["idle_keyword"] != idle_keyword:
+            highlightthickness = 2
+        txt_idle_keyword.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["advanced"]["resume_keyword"] != resume_keyword:
+            highlightthickness = 2
+        txt_resume_keyword.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["advanced"]["idle_keyword_second"] != idle_keyword_second:
+            highlightthickness = 2
+        txt_idle_keyword_second.config(highlightthickness=highlightthickness, highlightbackground="red")
+
+        highlightthickness = 0
+        if config_dict["advanced"]["resume_keyword_second"] != resume_keyword_second:
+            highlightthickness = 2
+        txt_resume_keyword_second.config(highlightthickness=highlightthickness, highlightbackground="red")
+    except Exception as exc:
+        print(exc)
+        pass
+
 def resetful_api_timer():
     while True:
         btn_preview_text_clicked()
@@ -2711,6 +2823,7 @@ def update_maxbot_runtime_status():
         current_time = system_clock_data.strftime('%H:%M:%S')
         #print('Current Time is:', current_time)
         lbl_system_clock_data.config(text=current_time)
+
     except Exception as exc:
         #print(exc)
         pass
@@ -2726,7 +2839,6 @@ def RuntimeTab(root, config_dict, language_code, UI_PADDING_X):
     global lbl_maxbot_status
     lbl_maxbot_status = Label(frame_group_header, text=translate[language_code]['running_status'])
     lbl_maxbot_status.grid(column=0, row=group_row_count, sticky = E)
-
 
     frame_maxbot_interrupt = Frame(frame_group_header)
 
@@ -2999,6 +3111,7 @@ def main():
 
     global root
     root = Tk()
+    #root = customtkinter.CTk()
     root.title(CONST_APP_VERSION)
 
     global UI_PADDING_X
