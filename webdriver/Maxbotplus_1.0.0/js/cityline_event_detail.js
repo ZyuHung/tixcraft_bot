@@ -101,7 +101,7 @@ var openWindow = function(url) {
 }
 
 var fillPerformanceData = function(data) {
-  console.log("eventPerfData:", data);
+  //console.log("eventPerfData:", data);
   performanceDataCache = data;
   perfPriceListMap = new Map();
   //selectedPerfId = null;

@@ -1,7 +1,8 @@
 var myInterval = null;
+var checkboxInterval = null;
 //console.log("assign appear");
 
-function kktix_verification_conditions(settings) 
+function kktix_verification_conditions(settings)
 {
     let is_text_sent = false;
     let user_guess_string_array = [];
@@ -34,7 +35,15 @@ function kktix_verification_conditions(settings)
     return is_text_sent;
 }
 
-function kktix_area_keyword(settings, base_info, register_info) 
+function kktix_agree()
+{
+    $('input[type=checkbox]:not(:checked)').each(function() {
+        $(this).click();
+        if(checkboxInterval) clearInterval(checkboxInterval);
+    });
+}
+
+function kktix_area_keyword(settings, base_info, register_info)
 {
     let area_keyword_array = [];
     if(settings) {
@@ -46,9 +55,9 @@ function kktix_area_keyword(settings, base_info, register_info)
     }
     // console.log(area_keyword_array);
     let target_area = null;
+    let matched_block=[];
     if(area_keyword_array.length) {
         for (let i = 0; i < area_keyword_array.length; i++) {
-            let matched_block=[];
             $("div.ticket-unit").each(function ()
             {
                 let html_text=$(this).text();
@@ -64,7 +73,6 @@ function kktix_area_keyword(settings, base_info, register_info)
             }
         }
     } else {
-        let matched_block=[];
         $("div.ticket-unit").each(function ()
         {
             matched_block.push($(this));
@@ -77,13 +85,6 @@ function kktix_area_keyword(settings, base_info, register_info)
         let link_id = first_node.attr("id");
         //console.log("link_id: " + link_id);
         if(link_id) {
-            $('input[type=checkbox]').each(function() {
-                //$(this).prop('checked', true);
-                if(!$(this).is(':checked')) {
-                    $(this).click();
-                }
-            });
-
             let seat_inventory_key=link_id.split("_")[1];
             //console.log("seat_inventory_key:"+seat_inventory_key);
             let seat_inventory_number=register_info.inventory.seatInventory[seat_inventory_key];
@@ -138,7 +139,7 @@ function kktix_area_keyword(settings, base_info, register_info)
                 }
 
                 let auto_click_next_btn = true;
-                
+
                 if(is_verification_conditions_popup) {
                     auto_click_next_btn = false;
                     let is_text_sent = kktix_verification_conditions(settings);
@@ -147,9 +148,27 @@ function kktix_area_keyword(settings, base_info, register_info)
                     }
                 }
 
+                let hide_other_row = false;
                 if(auto_click_next_btn) {
                     let $next_btn = $('div.register-new-next-button-area > button');
-                    $next_btn.click();
+                    if($next_btn) {
+                        if($next_btn.length>1) {
+                            $next_btn.last().click();
+                        } else {
+                            $next_btn.click();
+                        }
+                        hide_other_row = true;
+                    }
+                }
+
+                // due to racing with web driver.
+                if(hide_other_row) {
+                    for (let i = 0; i < matched_block.length; i++) {
+                        if(target_area!=matched_block[i])
+                        {
+                            matched_block[i].remove();
+                        }
+                    }
                 }
             }
         }
@@ -163,8 +182,12 @@ function begin()
     let settings = JSON.parse($("#settings").html());
     let base_info = JSON.parse($("#base_info").html());
     let register_info = JSON.parse($("#register_info").html());
+    $("#settings").remove();
+    $("#base_info").remove();
+    $("#register_info").remove();
     //console.log(settings);
     //console.log(register_info);
+
     kktix_area_keyword(settings, base_info, register_info);
 }
 
@@ -181,8 +204,20 @@ function dom_ready()
     return ret;
 }
 
-if(!dom_ready()) {
-    myInterval = setInterval(() => {
-        dom_ready();
-    }, 100);    
+const rootElement = document.documentElement;
+if(rootElement) {
+    if(!dom_ready()) {
+        myInterval = setInterval(() => {
+            dom_ready();
+        }, 200);
+        
+        checkboxInterval= setInterval(() => {
+            //console.log("kktix_agree")
+            kktix_agree();
+        }, 200);
+    }
+    $("footer").remove();
+    $("div.banner-wrapper div.img-wrapper img").remove();
 }
+
+

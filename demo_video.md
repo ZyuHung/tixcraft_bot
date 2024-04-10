@@ -1,5 +1,51 @@
 # Demo (示範影片)
 
+### 2024-03-17
+(2024-03-31) 為什麼我太太搶到8張(他就一個帳號+一台破電腦)？
+
+https://youtu.be/d3JxIk4hLsw
+
+### 2024-03-13
+KKTIX 無視窗搶票
+
+https://youtu.be/j9k7-2g-X3o
+
+### 2024-03-09: 
+增加瀏覽器視窗大小的設定值, 方便視窗多開 
+
+https://youtu.be/zPgP43w-ceg
+
+### 2024-03-08 
+KKIX 加購粉絲福利
+
+https://youtu.be/Hc2wW_sWiAo
+
+### 2024-03-06: 
+(2024-03-24) IU 演唱會沒搶到，沒搶到票建議多刷10~20分鐘
+
+https://youtu.be/6R3tGCZ_s6c
+
+### 2024-03-22
+MaxBot 售票系統架構猜測與搶票建議
+
+https://youtu.be/alpy9HX6aRw
+
+### 2024-03-04: 
+(2024-03-16) KKTIX 的 Golden Wave in Taiwan 搶票心得
+
+https://youtu.be/OZauGhoj4xU 
+* 前面都癈話，可以直接快轉到最後30秒。
+
+### 2024-03-02: 
+一直問KKTIX清票了沒, 解決KKTIX不定期清票
+
+https://youtu.be/4FTzfe1ZC8o
+
+### 2024-02-02: 
+KKTIX 定時啟動+帳號多開
+
+https://youtu.be/eETZTajxBnY
+
 ### 2024-02-01: 
 搶遠大Lisa票,沒搶到 (2024-02-24)
 
@@ -31,7 +77,7 @@ https://youtu.be/V8S_E7ayAGU
 https://youtu.be/u3YQCZZu6kE
 
 ### 2024-01-12:
-MaxBot 自動重啟瀏覽器
+MaxBot 自動重啟瀏覽器 (遠大刷太久會Out Of Memory)
 
 https://youtu.be/mp6pYgniaPU
 

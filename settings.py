@@ -7,26 +7,19 @@ try:
     from Tkinter import *
 except ImportError:
     # for Python3
-    from tkinter import *
-    from tkinter import ttk
-    import tkinter.font as tkfont
-    from tkinter import messagebox
-    from tkinter.filedialog import asksaveasfilename
-    '''
     try:
-        import customtkinter
-        customtkinter.set_appearance_mode("dark")  # Modes: system (default), light, dark
-        customtkinter.set_default_color_theme("dark-blue")  # Themes: blue (default), dark-blue, green
-    except Exception as exc:
+        import tkinter.font as tkfont
+        from tkinter import *
+        from tkinter import messagebox, ttk
+        from tkinter.filedialog import asksaveasfilename
+    except Exception as e:
         pass
-    '''
 
 import asyncio
 import base64
 import json
 import os
 import platform
-import socket
 import ssl
 import subprocess
 import sys
@@ -35,20 +28,20 @@ import time
 import warnings
 import webbrowser
 from datetime import datetime
-from typing import Optional
 
 import pyperclip
-import requests
 import tornado
 from tornado.web import Application
 from urllib3.exceptions import InsecureRequestWarning
+
+import util
 
 try:
     import ddddocr
 except Exception as exc:
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.02.07)"
+CONST_APP_VERSION = "MaxBot (2024.03.30)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -76,6 +69,7 @@ CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS = "canvas"
 CONST_WEBDRIVER_TYPE_SELENIUM = "selenium"
 CONST_WEBDRIVER_TYPE_UC = "undetected_chromedriver"
 CONST_WEBDRIVER_TYPE_DP = "DrissionPage"
+CONST_WEBDRIVER_TYPE_NODRIVER = "nodriver"
 
 CONST_SUPPORTED_SITES = ["https://kktix.com"
     ,"https://tixcraft.com (拓元)"
@@ -142,8 +136,11 @@ def load_translate():
     en_us["pass_date_is_sold_out"] = 'Pass date is sold out'
     en_us["auto_reload_coming_soon_page"] = 'Reload coming soon page'
     en_us["auto_reload_page_interval"] = 'Reload page interval(sec.)'
+    en_us["kktix_status_api"] = 'KKTIX status API'
+    en_us["max_dwell_time"] = 'KKTIX dwell time(sec.)'
     en_us["reset_browser_interval"] = 'Reset browser interval(sec.)'
     en_us["proxy_server_port"] = 'Proxy IP:PORT'
+    en_us["window_size"] = 'Window size'
 
     en_us["area_select_order"] = 'Area select order'
     en_us["area_keyword"] = 'Area Keyword'
@@ -218,8 +215,9 @@ def load_translate():
     en_us["ticketplus_password"] = 'TicketPlus password'
     en_us["save_password_alert"] = 'Saving passwords to config file may expose your passwords.'
 
-    en_us["play_captcha_sound"] = 'Play sound while ordering'
-    en_us["captcha_sound_filename"] = 'sound filename'
+    en_us["play_ticket_sound"] = 'Play sound when ticketing'
+    en_us["play_order_sound"] = 'Play sound when ordering'
+    en_us["play_sound_filename"] = 'sound filename'
     
     en_us["chrome_extension"] = "Chrome Browser Extension"
     en_us["disable_adjacent_seat"] = "Disable Adjacent Seat"
@@ -258,8 +256,11 @@ def load_translate():
     zh_tw["pass_date_is_sold_out"] = '避開「搶購一空」的日期'
     zh_tw["auto_reload_coming_soon_page"] = '自動刷新倒數中的日期頁面'
     zh_tw["auto_reload_page_interval"] = '自動刷新頁面間隔(秒)'
+    zh_tw["kktix_status_api"] = 'KKTIX購票狀態API'
+    zh_tw["max_dwell_time"] = 'KKTIX購票最長停留(秒)'
     zh_tw["reset_browser_interval"] = '重新啟動瀏覽器間隔(秒)'
     zh_tw["proxy_server_port"] = 'Proxy IP:PORT'
+    zh_tw["window_size"] = '瀏覽器視窗大小'
 
     zh_tw["area_select_order"] = '區域排序方式'
     zh_tw["area_keyword"] = '區域關鍵字'
@@ -333,8 +334,9 @@ def load_translate():
     zh_tw["ticketplus_password"] = '遠大 密碼'
     zh_tw["save_password_alert"] = '將密碼保存到設定檔中可能會讓您的密碼被盜。'
 
-    zh_tw["play_captcha_sound"] = '訂購時播放音效'
-    zh_tw["captcha_sound_filename"] = '音效檔'
+    zh_tw["play_ticket_sound"] = '有票時播放音效'
+    zh_tw["play_order_sound"] = '訂購時播放音效'
+    zh_tw["play_sound_filename"] = '音效檔'
     
     zh_tw["chrome_extension"] = "Chrome 瀏覽器擴充功能"
     zh_tw["disable_adjacent_seat"] = "允許不連續座位"
@@ -374,8 +376,11 @@ def load_translate():
     zh_cn["pass_date_is_sold_out"] = '避开“抢购一空”的日期'
     zh_cn["auto_reload_coming_soon_page"] = '自动刷新倒数中的日期页面'
     zh_cn["auto_reload_page_interval"] = '重新加载间隔(秒)'
+    zh_cn["kktix_status_api"] = 'KKTIX购票状态API'
+    zh_cn["max_dwell_time"] = '购票网页最长停留(秒)'
     zh_cn["reset_browser_interval"] = '重新启动浏览器间隔(秒)'
     zh_cn["proxy_server_port"] = 'Proxy IP:PORT'
+    zh_cn["window_size"] = '浏览器窗口大小'
 
     zh_cn["area_select_order"] = '区域排序方式'
     zh_cn["area_keyword"] = '区域关键字'
@@ -450,8 +455,9 @@ def load_translate():
     zh_cn["ticketplus_password"] = '远大 密码'
     zh_cn["save_password_alert"] = '将密码保存到文件中可能会暴露您的密码。'
 
-    zh_cn["play_captcha_sound"] = '订购时播放音效'
-    zh_cn["captcha_sound_filename"] = '音效档'
+    zh_cn["play_ticket_sound"] = '有票时播放音效'
+    zh_cn["play_order_sound"] = '订购时播放音效'
+    zh_cn["play_sound_filename"] = '音效档'
     
     zh_cn["chrome_extension"] = "Chrome 浏览器扩展程序"
     zh_cn["disable_adjacent_seat"] = "允许不连续座位"
@@ -491,8 +497,11 @@ def load_translate():
     ja_jp["pass_date_is_sold_out"] = '「売り切れ」公演を避ける'
     ja_jp["auto_reload_coming_soon_page"] = '公開予定のページをリロード'
     ja_jp["auto_reload_page_interval"] = 'リロード間隔(秒)'
+    ja_jp["kktix_status_api"] = 'KKTIX status API'
+    ja_jp["max_dwell_time"] = '最大滞留時間(秒)'
     ja_jp["reset_browser_interval"] = 'ブラウザの再起動間隔（秒）'
     ja_jp["proxy_server_port"] = 'Proxy IP:PORT'
+    ja_jp["window_size"] = 'ウィンドウサイズ'
 
     ja_jp["area_select_order"] = 'エリアソート方法'
     ja_jp["area_keyword"] = 'エリアキーワード'
@@ -566,8 +575,9 @@ def load_translate():
     ja_jp["ticketplus_password"] = '遠大のパスワード'
     ja_jp["save_password_alert"] = 'パスワードをファイルに保存すると、パスワードが公開される可能性があります。'
 
-    ja_jp["play_captcha_sound"] = '注文時に音を鳴らす'
-    ja_jp["captcha_sound_filename"] = 'サウンドファイル'
+    ja_jp["play_ticket_sound"] = '有票時に音を鳴らす'
+    ja_jp["play_order_sound"] = '注文時に音を鳴らす'
+    ja_jp["play_sound_filename"] = 'サウンドファイル'
     
     ja_jp["chrome_extension"] = "Chrome ブラウザ拡張機能"
     ja_jp["disable_adjacent_seat"] = "連続しない座席も可"
@@ -585,75 +595,6 @@ def load_translate():
     translate['ja_jp']=ja_jp
     return translate
 
-def get_ip_address():
-    default_ip = "127.0.0.1"
-    ip = default_ip
-    try:
-        ip = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-            if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)),
-            s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET,
-            socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-    except Exception as exc:
-        print(exc)
-        try:
-            ip = socket.gethostname()
-        except Exception as exc2:
-            print(exc2)
-            ip = default_ip
-    return ip
-
-def format_config_keyword_for_json(user_input):
-    if len(user_input) > 0:
-        if not ('\"' in user_input):
-            user_input = '"' + user_input + '"'
-
-        if user_input[:1]=="{" and user_input[-1:]=="}":
-            tmp_json = {}
-            try:
-                tmp_json = json.loads(user_input)
-                key=list(tmp_json.keys())[0]
-                first_item=tmp_json[key]
-                user_input=json.dumps(first_item)
-            except Exception as exc:
-                pass
-
-        if user_input[:1]=="[" and user_input[-1:]=="]":
-            user_input=user_input[1:]
-            user_input=user_input[:-1]
-    return user_input
-
-def sx(s1):
-    key=18
-    return ''.join(chr(ord(a) ^ key) for a in s1)
-
-def decryptMe(b):
-    s=""
-    if(len(b)>0):
-        s=sx(base64.b64decode(b).decode("UTF-8"))
-    return s
-
-def encryptMe(s):
-    data=""
-    if(len(s)>0):
-        data=base64.b64encode(sx(s).encode('UTF-8')).decode("UTF-8")
-    return data
-
-def is_arm():
-    ret = False
-    if "-arm" in platform.platform():
-        ret = True
-    return ret
-
-def get_app_root():
-    # 讀取檔案裡的參數值
-    basis = ""
-    if hasattr(sys, 'frozen'):
-        basis = sys.executable
-    else:
-        basis = sys.argv[0]
-    app_root = os.path.dirname(basis)
-    return app_root
-
 def get_default_config():
     config_dict={}
 
@@ -668,7 +609,7 @@ def get_default_config():
     config_dict["ocr_captcha"]["image_source"] = CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS
     config_dict["webdriver_type"] = CONST_WEBDRIVER_TYPE_UC
 
-    if is_arm():
+    if util.is_arm():
         config_dict["ocr_captcha"]["enable"] = False
         config_dict["ocr_captcha"]["force_submit"] = False
 
@@ -693,9 +634,10 @@ def get_default_config():
 
     config_dict['advanced']={}
 
-    config_dict['advanced']['play_captcha_sound']={}
-    config_dict["advanced"]["play_captcha_sound"]["enable"] = True
-    config_dict["advanced"]["play_captcha_sound"]["filename"] = CONST_CAPTCHA_SOUND_FILENAME_DEFAULT
+    config_dict['advanced']['play_sound']={}
+    config_dict["advanced"]["play_sound"]["ticket"] = True
+    config_dict["advanced"]["play_sound"]["order"] = True
+    config_dict["advanced"]["play_sound"]["filename"] = CONST_CAPTCHA_SOUND_FILENAME_DEFAULT
 
     config_dict["advanced"]["tixcraft_sid"] = ""
     config_dict["advanced"]["ibonqware"] = ""
@@ -743,9 +685,12 @@ def get_default_config():
     config_dict["advanced"]["user_guess_string"] = ""
     config_dict["advanced"]["remote_url"] = "http://127.0.0.1:%d/" % (CONST_SERVER_PORT)
 
-    config_dict["advanced"]["auto_reload_page_interval"] = 0.1
+    config_dict["advanced"]["auto_reload_page_interval"] = 0
     config_dict["advanced"]["reset_browser_interval"] = 0
+    config_dict["advanced"]["kktix_status_api"] = False
+    config_dict["advanced"]["max_dwell_time"] = 60
     config_dict["advanced"]["proxy_server_port"] = ""
+    config_dict["advanced"]["window_size"] = "480,1024"
 
     config_dict["advanced"]["idle_keyword"] = ""
     config_dict["advanced"]["resume_keyword"] = ""
@@ -762,7 +707,7 @@ def read_last_url_from_file():
     return ret
 
 def load_json():
-    app_root = get_app_root()
+    app_root = util.get_app_root()
 
     # overwrite config path.
     config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
@@ -776,19 +721,23 @@ def load_json():
     return config_filepath, config_dict
 
 def btn_restore_defaults_clicked(language_code):
-    app_root = get_app_root()
+    app_root = util.get_app_root()
     config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
+    if os.path.exists(str(config_filepath)):
+        try:
+            os.unlink(str(config_filepath))
+        except Exception as exc:
+            print(exc)
+            pass
 
     config_dict = get_default_config()
-    with open(config_filepath, 'w') as outfile:
-        json.dump(config_dict, outfile)
     messagebox.showinfo(translate[language_code]["restore_defaults"], translate[language_code]["done"])
 
     global root
     load_GUI(root, config_dict)
 
 def do_maxbot_idle():
-    app_root = get_app_root()
+    app_root = util.get_app_root()
     idle_filepath = os.path.join(app_root, CONST_MAXBOT_INT28_FILE)
     with open(CONST_MAXBOT_INT28_FILE, "w") as text_file:
         text_file.write("")
@@ -798,10 +747,10 @@ def btn_idle_clicked(language_code):
     update_maxbot_runtime_status()
 
 def do_maxbot_resume():
-    app_root = get_app_root()
+    app_root = util.get_app_root()
     idle_filepath = os.path.join(app_root, CONST_MAXBOT_INT28_FILE)
     for i in range(3):
-        force_remove_file(idle_filepath)
+         util.force_remove_file(idle_filepath)
 
 def btn_resume_clicked(language_code):
     do_maxbot_resume()
@@ -809,18 +758,20 @@ def btn_resume_clicked(language_code):
 
 def btn_launcher_clicked(language_code):
     Root_Dir = ""
-    save_ret = btn_save_act(language_code, slience_mode=True)
+    save_ret = btn_save_act(slience_mode=True)
     if save_ret:
-        run_python_script("config_launcher")
+        script_name = "config_launcher"
+        threading.Thread(target=util.launch_maxbot, args=(script_name,)).start()
 
-def btn_save_clicked(language_code):
-    btn_save_act(language_code)
+def btn_save_clicked():
+    btn_save_act()
 
-def btn_save_act(language_code, slience_mode=False):
-    app_root = get_app_root()
+def btn_save_act(slience_mode=False):
+    app_root = util.get_app_root()
     config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
 
     config_dict = get_default_config()
+    language_code = get_language_code_by_name(config_dict["language"])
 
     # read user input
     global combo_homepage
@@ -845,8 +796,11 @@ def btn_save_act(language_code, slience_mode=False):
     global chk_state_pass_date_is_sold_out
     global chk_state_auto_reload_coming_soon_page
     global txt_auto_reload_page_interval
+    global chk_status_kktix_status_api
+    global txt_max_dwell_time
     global txt_reset_browser_intervalv
     global txt_proxy_server_port
+    global txt_window_size
 
     global txt_tixcraft_sid
     global txt_ibon_ibonqware
@@ -872,8 +826,9 @@ def btn_save_act(language_code, slience_mode=False):
     global txt_udn_password
     global txt_ticketplus_password
 
-    global chk_state_play_captcha_sound
-    global txt_captcha_sound_filename
+    global chk_state_play_ticket_sound
+    global chk_state_play_order_sound
+    global txt_play_sound_filename
     global chk_state_ocr_captcha
     global chk_state_ocr_captcha_ddddocr_beta
     global chk_state_ocr_captcha_force_submit
@@ -936,35 +891,35 @@ def btn_save_act(language_code, slience_mode=False):
         config_dict["date_auto_select"]["mode"] = combo_date_auto_select_mode.get().strip()
 
         date_keyword = txt_date_keyword.get("1.0",END).strip()
-        date_keyword = format_config_keyword_for_json(date_keyword)
+        date_keyword = util.format_config_keyword_for_json(date_keyword)
         config_dict["date_auto_select"]["date_keyword"] = date_keyword
 
         config_dict["tixcraft"]["pass_date_is_sold_out"] = bool(chk_state_pass_date_is_sold_out.get())
         config_dict["tixcraft"]["auto_reload_coming_soon_page"] = bool(chk_state_auto_reload_coming_soon_page.get())
 
         area_keyword = txt_area_keyword.get("1.0",END).strip()
-        area_keyword = format_config_keyword_for_json(area_keyword)
+        area_keyword = util.format_config_keyword_for_json(area_keyword)
 
         keyword_exclude = txt_keyword_exclude.get("1.0",END).strip()
-        keyword_exclude = format_config_keyword_for_json(keyword_exclude)
+        keyword_exclude = util.format_config_keyword_for_json(keyword_exclude)
 
         user_guess_string = txt_user_guess_string.get("1.0",END).strip()
-        user_guess_string = format_config_keyword_for_json(user_guess_string)
+        user_guess_string = util.format_config_keyword_for_json(user_guess_string)
 
         remote_url = txt_remote_url.get("1.0",END).strip()
-        remote_url = format_config_keyword_for_json(remote_url)
+        remote_url = util.format_config_keyword_for_json(remote_url)
 
         idle_keyword = txt_idle_keyword.get("1.0",END).strip()
-        idle_keyword = format_config_keyword_for_json(idle_keyword)
+        idle_keyword = util.format_config_keyword_for_json(idle_keyword)
 
         resume_keyword = txt_resume_keyword.get("1.0",END).strip()
-        resume_keyword = format_config_keyword_for_json(resume_keyword)
+        resume_keyword = util.format_config_keyword_for_json(resume_keyword)
 
         idle_keyword_second = txt_idle_keyword_second.get("1.0",END).strip()
-        idle_keyword_second = format_config_keyword_for_json(idle_keyword_second)
+        idle_keyword_second = util.format_config_keyword_for_json(idle_keyword_second)
 
         resume_keyword_second = txt_resume_keyword_second.get("1.0",END).strip()
-        resume_keyword_second = format_config_keyword_for_json(resume_keyword_second)
+        resume_keyword_second = util.format_config_keyword_for_json(resume_keyword_second)
 
         # test keyword format.
         if is_all_data_correct:
@@ -1064,8 +1019,9 @@ def btn_save_act(language_code, slience_mode=False):
         config_dict["area_auto_select"]["enable"] = bool(chk_state_area_auto_select.get())
         config_dict["area_auto_select"]["mode"] = combo_area_auto_select_mode.get().strip()
 
-        config_dict["advanced"]["play_captcha_sound"]["enable"] = bool(chk_state_play_captcha_sound.get())
-        config_dict["advanced"]["play_captcha_sound"]["filename"] = txt_captcha_sound_filename.get().strip()
+        config_dict["advanced"]["play_sound"]["ticket"] = bool(chk_state_play_ticket_sound.get())
+        config_dict["advanced"]["play_sound"]["order"] = bool(chk_state_play_order_sound.get())
+        config_dict["advanced"]["play_sound"]["filename"] = txt_play_sound_filename.get().strip()
 
         config_dict["advanced"]["tixcraft_sid"] = txt_tixcraft_sid.get().strip()
         config_dict["advanced"]["ibonqware"] = txt_ibon_ibonqware.get().strip()
@@ -1095,16 +1051,16 @@ def btn_save_act(language_code, slience_mode=False):
         config_dict["advanced"]["tixcraft_sid"] = config_dict["advanced"]["tixcraft_sid"]
         config_dict["advanced"]["ibonqware"] = config_dict["advanced"]["ibonqware"]
 
-        config_dict["advanced"]["facebook_password"] = encryptMe(config_dict["advanced"]["facebook_password"])
-        config_dict["advanced"]["kktix_password"] = encryptMe(config_dict["advanced"]["kktix_password"])
-        config_dict["advanced"]["fami_password"] = encryptMe(config_dict["advanced"]["fami_password"])
-        config_dict["advanced"]["cityline_password"] = encryptMe(config_dict["advanced"]["cityline_password"])
-        config_dict["advanced"]["urbtix_password"] = encryptMe(config_dict["advanced"]["urbtix_password"])
-        config_dict["advanced"]["hkticketing_password"] = encryptMe(config_dict["advanced"]["hkticketing_password"])
-        config_dict["advanced"]["kham_password"] = encryptMe(config_dict["advanced"]["kham_password"])
-        config_dict["advanced"]["ticket_password"] = encryptMe(config_dict["advanced"]["ticket_password"])
-        config_dict["advanced"]["udn_password"] = encryptMe(config_dict["advanced"]["udn_password"])
-        config_dict["advanced"]["ticketplus_password"] = encryptMe(config_dict["advanced"]["ticketplus_password"])
+        config_dict["advanced"]["facebook_password"] = util.encryptMe(config_dict["advanced"]["facebook_password"])
+        config_dict["advanced"]["kktix_password"] = util.encryptMe(config_dict["advanced"]["kktix_password"])
+        config_dict["advanced"]["fami_password"] = util.encryptMe(config_dict["advanced"]["fami_password"])
+        config_dict["advanced"]["cityline_password"] = util.encryptMe(config_dict["advanced"]["cityline_password"])
+        config_dict["advanced"]["urbtix_password"] = util.encryptMe(config_dict["advanced"]["urbtix_password"])
+        config_dict["advanced"]["hkticketing_password"] = util.encryptMe(config_dict["advanced"]["hkticketing_password"])
+        config_dict["advanced"]["kham_password"] = util.encryptMe(config_dict["advanced"]["kham_password"])
+        config_dict["advanced"]["ticket_password"] = util.encryptMe(config_dict["advanced"]["ticket_password"])
+        config_dict["advanced"]["udn_password"] = util.encryptMe(config_dict["advanced"]["udn_password"])
+        config_dict["advanced"]["ticketplus_password"] = util.encryptMe(config_dict["advanced"]["ticketplus_password"])
 
         config_dict["advanced"]["chrome_extension"] = bool(chk_state_chrome_extension.get())
         config_dict["advanced"]["disable_adjacent_seat"] = bool(chk_state_adjacent_seat.get())
@@ -1117,19 +1073,26 @@ def btn_save_act(language_code, slience_mode=False):
         config_dict["ocr_captcha"]["force_submit"] = bool(chk_state_ocr_captcha_force_submit.get())
         config_dict["ocr_captcha"]["image_source"] = combo_ocr_captcha_image_source.get().strip()
 
-        if is_arm():
+        if util.is_arm():
             config_dict["ocr_captcha"]["enable"] = False
             config_dict["ocr_captcha"]["force_submit"] = False
 
         config_dict["webdriver_type"] = combo_webdriver_type.get().strip()
         config_dict["advanced"]["headless"] = bool(chk_state_headless.get())
-        config_dict["advanced"]["verbose"] = bool(chk_state_verbose.get())
+        #config_dict["advanced"]["verbose"] = bool(chk_state_verbose.get())
 
         config_dict["advanced"]["auto_guess_options"] = bool(chk_state_auto_guess_options.get())
 
         config_dict["advanced"]["auto_reload_page_interval"] = float(txt_auto_reload_page_interval.get().strip())
-        config_dict["advanced"]["reset_browser_interval"] = float(txt_reset_browser_interval.get().strip())
+        config_dict["advanced"]["kktix_status_api"] = bool(chk_state_kktix_status_api.get())
+        config_dict["advanced"]["max_dwell_time"] = int(txt_max_dwell_time.get().strip())
+        config_dict["advanced"]["reset_browser_interval"] = int(txt_reset_browser_interval.get().strip())
         config_dict["advanced"]["proxy_server_port"] = txt_proxy_server_port.get().strip()
+        config_dict["advanced"]["window_size"] = txt_window_size.get().strip()
+
+        if config_dict["advanced"]["max_dwell_time"] > 0:
+            if config_dict["advanced"]["max_dwell_time"] < 15:
+                config_dict["advanced"]["max_dwell_time"] = 15
 
         if config_dict["advanced"]["reset_browser_interval"] > 0:
             if config_dict["advanced"]["reset_browser_interval"] < 20:
@@ -1145,28 +1108,49 @@ def btn_save_act(language_code, slience_mode=False):
             if not file_to_save is None:
                 if len(file_to_save) > 0:
                     print("save as to:", file_to_save)
-                    save_json(config_dict, file_to_save)
+                    util.save_json(config_dict, file_to_save)
         else:
             # slience
-            save_json(config_dict, config_filepath)
+            util.save_json(config_dict, config_filepath)
 
     return is_all_data_correct
 
-def save_json(config_dict, target_path):
-    json_str = json.dumps(config_dict, indent=4)
-    with open(target_path, 'w') as outfile:
-        outfile.write(json_str)
 
 def btn_run_clicked(language_code):
     print('run button pressed.')
     Root_Dir = ""
-    save_ret = btn_save_act(language_code, slience_mode=True)
+    save_ret = btn_save_act(slience_mode=True)
     print("save config result:", save_ret)
     if save_ret:
-        threading.Thread(target=launch_maxbot).start()
+        launch_maxbot()
 
 def launch_maxbot():
-    run_python_script("chrome_tixcraft")
+    global launch_counter
+    if "launch_counter" in globals():
+        launch_counter += 1
+    else:
+        launch_counter = 0
+    global combo_webdriver_type
+    webdriver_type = combo_webdriver_type.get().strip()
+
+    script_name = "chrome_tixcraft"
+    if webdriver_type == CONST_WEBDRIVER_TYPE_NODRIVER:
+        script_name = "nodriver_tixcraft"
+
+    global txt_window_size
+    window_size = txt_window_size.get().strip()
+    if len(window_size) > 0:
+        if "," in window_size:
+            size_array = window_size.split(",")
+            target_width = int(size_array[0])
+            target_left = target_width * launch_counter
+            #print("target_left:", target_left)
+            if target_left >= 1440:
+                launch_counter = 0
+            window_size = window_size + "," + str(launch_counter)
+            #print("window_size:", window_size)
+
+    threading.Thread(target=util.launch_maxbot, args=(script_name,"","","","",window_size,)).start()
 
 def show_preview_text():
     if os.path.exists(CONST_MAXBOT_ANSWER_ONLINE_FILE):
@@ -1174,7 +1158,7 @@ def show_preview_text():
         with open(CONST_MAXBOT_ANSWER_ONLINE_FILE, "r") as text_file:
             answer_text = text_file.readline()
 
-        answer_text = format_config_keyword_for_json(answer_text)
+        answer_text = util.format_config_keyword_for_json(answer_text)
 
         date_array = []
         try:
@@ -1183,58 +1167,22 @@ def show_preview_text():
             date_array = []
 
         global lbl_online_dictionary_preview_data
-        try:
-            lbl_online_dictionary_preview_data.config(text=','.join(date_array))
-        except Exception as exc:
-            pass
-
-def write_string_to_file(filename, data):
-    outfile = None
-    if platform.system() == 'Windows':
-        outfile = open(filename, 'w', encoding='UTF-8')
-    else:
-        outfile = open(filename, 'w')
-
-    if not outfile is None:
-        outfile.write("%s" % data)
-
-def save_url_to_file(new_remote_url, force_write = False):
-    html_text = ""
-    if len(new_remote_url) > 0:
-        html_result = None
-        try:
-            html_result = requests.get(new_remote_url , timeout=0.5, allow_redirects=False)
-        except Exception as exc:
-            html_result = None
-            #print(exc)
-        if not html_result is None:
-            status_code = html_result.status_code
-            #print("status_code:", status_code)
-            if status_code == 200:
-                html_text = html_result.text
-                #print("html_text:", html_text)
-
-    is_write_to_file = False
-    if force_write:
-        is_write_to_file = True
-    if len(html_text) > 0:
-        is_write_to_file = True
-
-    if is_write_to_file:
-        html_text = format_config_keyword_for_json(html_text)
-        working_dir = os.path.dirname(os.path.realpath(__file__))
-        target_path = os.path.join(working_dir, CONST_MAXBOT_ANSWER_ONLINE_FILE)
-        write_string_to_file(target_path, html_text)
-    return is_write_to_file
+        if 'lbl_online_dictionary_preview_data' in globals():
+            try:
+                lbl_online_dictionary_preview_data.config(text=','.join(date_array))
+            except Exception as exc:
+                pass
 
 def btn_preview_text_clicked():
     global txt_remote_url
     remote_url = ""
-    try:
-        remote_url = txt_remote_url.get("1.0",END).strip()
-    except Exception as exc:
-        pass
-    remote_url = format_config_keyword_for_json(remote_url)
+    if 'txt_remote_url' in globals():
+        try:
+            remote_url = txt_remote_url.get("1.0",END).strip()
+        except Exception as exc:
+            pass
+    remote_url = util.format_config_keyword_for_json(remote_url)
+
     if len(remote_url) > 0:
         url_array = []
         try:
@@ -1247,53 +1195,11 @@ def btn_preview_text_clicked():
             force_write = True
         for each_url in url_array:
             #print("new_remote_url:", new_remote_url)
-            is_write_to_file = save_url_to_file(each_url, force_write=force_write)
+            is_write_to_file = util.save_url_to_file(each_url, CONST_MAXBOT_ANSWER_ONLINE_FILE, force_write=force_write)
             if is_write_to_file:
                 break
     show_preview_text()
 
-def run_python_script(script_name):
-    working_dir = os.path.dirname(os.path.realpath(__file__))
-    if hasattr(sys, 'frozen'):
-        print("execute in frozen mode")
-
-        # check platform here.
-        if platform.system() == 'Darwin':
-            print("execute MacOS python script")
-            subprocess.Popen("./" + script_name, shell=True, cwd=working_dir)
-        if platform.system() == 'Linux':
-            print("execute linux binary")
-            subprocess.Popen("./" + script_name, shell=True, cwd=working_dir)
-        if platform.system() == 'Windows':
-            print("execute .exe binary.")
-            subprocess.Popen(script_name + ".exe", shell=True, cwd=working_dir)
-    else:
-        interpreter_binary = 'python'
-        interpreter_binary_alt = 'python3'
-        if platform.system() == 'Darwin':
-            # try python3 before python.
-            interpreter_binary = 'python3'
-            interpreter_binary_alt = 'python'
-        print("execute in shell mode.")
-        #print("script path:", working_dir)
-        #messagebox.showinfo(title="Debug0", message=working_dir)
-
-        # some python3 binary, running in 'python' command.
-        try:
-            print('try', interpreter_binary)
-            s=subprocess.Popen([interpreter_binary, script_name + '.py'], cwd=working_dir)
-            #s=subprocess.Popen(['./chrome_tixcraft'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=working_dir)
-            #s=subprocess.run(['python3', 'chrome_tixcraft.py'], cwd=working_dir)
-            #messagebox.showinfo(title="Debug1", message=str(s))
-        except Exception as exc:
-            print('try', interpreter_binary_alt)
-            try:
-                s=subprocess.Popen([interpreter_binary_alt, script_name + '.py'], cwd=working_dir)
-            except Exception as exc:
-                msg=str(exc)
-                print("exeption:", msg)
-                #messagebox.showinfo(title="Debug2", message=msg)
-                pass
 
 def btn_open_text_server_clicked():
     global tab4
@@ -1301,29 +1207,12 @@ def btn_open_text_server_clicked():
     tabControl.select(tab4)
 
 def btn_preview_sound_clicked():
-    global txt_captcha_sound_filename
-    new_sound_filename = txt_captcha_sound_filename.get().strip()
+    global txt_play_sound_filename
+    new_sound_filename = txt_play_sound_filename.get().strip()
     #print("new_sound_filename:", new_sound_filename)
-    app_root = get_app_root()
+    app_root = util.get_app_root()
     new_sound_filename = os.path.join(app_root, new_sound_filename)
-    play_mp3_async(new_sound_filename)
-
-def play_mp3_async(sound_filename):
-    threading.Thread(target=play_mp3, args=(sound_filename,)).start()
-
-def play_mp3(sound_filename):
-    from playsound import playsound
-    try:
-        playsound(sound_filename)
-    except Exception as exc:
-        msg=str(exc)
-        print("play sound exeption:", msg)
-        if platform.system() == 'Windows':
-            import winsound
-            try:
-                winsound.PlaySound(sound_filename, winsound.SND_FILENAME)
-            except Exception as exc2:
-                pass
+    util.play_mp3_async(new_sound_filename)
 
 def open_url(url):
     webbrowser.open_new(url)
@@ -1407,7 +1296,8 @@ def applyNewLanguage():
     global chk_area_auto_select
     global chk_pass_date_is_sold_out
     global chk_auto_reload_coming_soon_page
-    global chk_play_captcha_sound
+    global chk_play_ticket_sound
+    global chk_play_order_sound
     global chk_ocr_captcha
     global chk_ocr_captcha_ddddocr_beta
     global chk_ocr_captcha_force_submit
@@ -1441,8 +1331,11 @@ def applyNewLanguage():
     global lbl_block_facebook_network_recommand
 
     global lbl_auto_reload_page_interval
+    global lbl_kktix_status_api
+    global lbl_max_dwell_time
     global lbl_reset_browser_interval
     global lbl_proxy_server_port
+    global lbl_window_size
 
     lbl_homepage.config(text=translate[language_code]["homepage"])
     lbl_browser.config(text=translate[language_code]["browser"])
@@ -1479,8 +1372,11 @@ def applyNewLanguage():
     lbl_block_facebook_network_recommand.config(text=translate[language_code]["recommand_enable"])
 
     lbl_auto_reload_page_interval.config(text=translate[language_code]["auto_reload_page_interval"])
+    lbl_kktix_status_api.config(text=translate[language_code]["kktix_status_api"])
+    lbl_max_dwell_time.config(text=translate[language_code]["max_dwell_time"])
     lbl_reset_browser_interval.config(text=translate[language_code]["reset_browser_interval"])
     lbl_proxy_server_port.config(text=translate[language_code]["proxy_server_port"])
+    lbl_window_size.config(text=translate[language_code]["window_size"])
 
     lbl_headless.config(text=translate[language_code]["headless"])
     lbl_verbose.config(text=translate[language_code]["verbose"])
@@ -1506,7 +1402,8 @@ def applyNewLanguage():
     chk_area_auto_select.config(text=translate[language_code]["enable"])
     chk_pass_date_is_sold_out.config(text=translate[language_code]["enable"])
     chk_auto_reload_coming_soon_page.config(text=translate[language_code]["enable"])
-    chk_play_captcha_sound.config(text=translate[language_code]["enable"])
+    chk_play_ticket_sound.config(text=translate[language_code]["enable"])
+    chk_play_order_sound.config(text=translate[language_code]["enable"])
     chk_ocr_captcha.config(text=translate[language_code]["enable"])
     chk_ocr_captcha_ddddocr_beta.config(text=translate[language_code]["enable"])
     chk_ocr_captcha_force_submit.config(text=translate[language_code]["enable"])
@@ -1554,8 +1451,9 @@ def applyNewLanguage():
 
     global lbl_save_password_alert
 
-    global lbl_play_captcha_sound
-    global lbl_captcha_sound_filename
+    global lbl_play_ticket_sound
+    global lbl_play_order_sound
+    global lbl_play_sound_filename
 
     lbl_tixcraft_sid.config(text=translate[language_code]["tixcraft_sid"])
     lbl_ibon_ibonqware.config(text=translate[language_code]["ibon_ibonqware"])
@@ -1582,8 +1480,9 @@ def applyNewLanguage():
 
     lbl_save_password_alert.config(text=translate[language_code]["save_password_alert"])
 
-    lbl_play_captcha_sound.config(text=translate[language_code]["play_captcha_sound"])
-    lbl_captcha_sound_filename.config(text=translate[language_code]["captcha_sound_filename"])
+    lbl_play_ticket_sound.config(text=translate[language_code]["play_ticket_sound"])
+    lbl_play_order_sound.config(text=translate[language_code]["play_order_sound"])
+    lbl_play_sound_filename.config(text=translate[language_code]["play_sound_filename"])
 
     lbl_slogan.config(text=translate[language_code]["maxbot_slogan"])
     lbl_help.config(text=translate[language_code]["help"])
@@ -1628,8 +1527,10 @@ def showHideBlocks():
 
     global combo_homepage
 
-    new_homepage = combo_homepage.get().strip()
-    #print("new homepage value:", new_homepage)
+    new_homepage = ""
+    if 'combo_homepage' in globals():
+        new_homepage = combo_homepage.get().strip()
+        #print("new homepage value:", new_homepage)
 
     BLOCK_STYLE_TIXCRAFT = 0
     BLOCK_STYLE_KKTIX = 1
@@ -1640,15 +1541,15 @@ def showHideBlocks():
         if domain_name in new_homepage:
             show_block_index = BLOCK_STYLE_KKTIX
 
-    if show_block_index == BLOCK_STYLE_KKTIX:
-        frame_group_kktix.grid(column=0, row=frame_group_kktix_index, padx=UI_PADDING_X)
-        frame_group_tixcraft.grid_forget()
+    if 'frame_group_kktix' in globals():
+        if show_block_index == BLOCK_STYLE_KKTIX:
+            frame_group_kktix.grid(column=0, row=frame_group_kktix_index, padx=UI_PADDING_X)
+            frame_group_tixcraft.grid_forget()
+        else:
+            frame_group_tixcraft.grid(column=0, row=frame_group_tixcraft_index, padx=UI_PADDING_X)
+            frame_group_kktix.grid_forget()
 
-    else:
-        frame_group_tixcraft.grid(column=0, row=frame_group_tixcraft_index, padx=UI_PADDING_X)
-        frame_group_kktix.grid_forget()
-
-    showHideTixcraftBlocks()
+        showHideTixcraftBlocks()
 
 def showHideOcrCaptchaWithSubmit():
     global chk_state_ocr_captcha
@@ -2003,17 +1904,31 @@ def PreferenctTab(root, config_dict, language_code, UI_PADDING_X):
     showHideAreaBlocks()
 
 def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
+    browser_options = ("chrome","firefox","edge","safari","brave")
+    webdriver_type_options = (CONST_WEBDRIVER_TYPE_SELENIUM, CONST_WEBDRIVER_TYPE_UC)
+
+    not_support_python_version = ["3.6.", "3.7.", "3.8."]
+    is_current_version_after_3_9 = True
+    for not_support_ver in not_support_python_version:
+        current_version = platform.python_version()
+        if current_version[:4] == not_support_ver :
+            is_current_version_after_3_9 = False
+            break
+    if is_current_version_after_3_9:
+        webdriver_type_options = (CONST_WEBDRIVER_TYPE_SELENIUM, CONST_WEBDRIVER_TYPE_UC, CONST_WEBDRIVER_TYPE_NODRIVER)
+        pass
+
     row_count = 0
 
     frame_group_header = Frame(root)
     group_row_count = 0
 
     # assign default value.
-    captcha_sound_filename = config_dict["advanced"]["play_captcha_sound"]["filename"].strip()
-    if captcha_sound_filename is None:
-        captcha_sound_filename = ""
-    if len(captcha_sound_filename)==0:
-        captcha_sound_filename = captcha_sound_filename_default
+    play_sound_filename = config_dict["advanced"]["play_sound"]["filename"].strip()
+    if play_sound_filename is None:
+        play_sound_filename = ""
+    if len(play_sound_filename)==0:
+        play_sound_filename = play_sound_filename_default
 
     global lbl_browser
     lbl_browser = Label(frame_group_header, text=translate[language_code]['browser'])
@@ -2021,7 +1936,7 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global combo_browser
     combo_browser = ttk.Combobox(frame_group_header, state="readonly", width=30)
-    combo_browser['values']= ("chrome","firefox","edge","safari","brave")
+    combo_browser['values']= browser_options
     combo_browser.set(config_dict['browser'])
     combo_browser.grid(column=1, row=group_row_count, sticky = W)
 
@@ -2058,34 +1973,48 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global combo_webdriver_type
     combo_webdriver_type = ttk.Combobox(frame_group_header, state="readonly", width=30)
-    combo_webdriver_type['values']= (CONST_WEBDRIVER_TYPE_SELENIUM, CONST_WEBDRIVER_TYPE_UC)
+    combo_webdriver_type['values']= webdriver_type_options
     combo_webdriver_type.set(config_dict["webdriver_type"])
     combo_webdriver_type.grid(column=1, row=group_row_count, sticky = W)
 
     group_row_count +=1
 
-    global lbl_play_captcha_sound
-    lbl_play_captcha_sound = Label(frame_group_header, text=translate[language_code]['play_captcha_sound'])
-    lbl_play_captcha_sound.grid(column=0, row=group_row_count, sticky = E)
+    global lbl_play_ticket_sound
+    lbl_play_ticket_sound = Label(frame_group_header, text=translate[language_code]['play_ticket_sound'])
+    lbl_play_ticket_sound.grid(column=0, row=group_row_count, sticky = E)
 
-    global chk_state_play_captcha_sound
-    chk_state_play_captcha_sound = BooleanVar()
-    chk_state_play_captcha_sound.set(config_dict["advanced"]["play_captcha_sound"]["enable"])
+    global chk_state_play_ticket_sound
+    chk_state_play_ticket_sound = BooleanVar()
+    chk_state_play_ticket_sound.set(config_dict["advanced"]["play_sound"]["ticket"])
 
-    global chk_play_captcha_sound
-    chk_play_captcha_sound = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_play_captcha_sound)
-    chk_play_captcha_sound.grid(column=1, row=group_row_count, sticky = W)
+    global chk_play_ticket_sound
+    chk_play_ticket_sound = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_play_ticket_sound)
+    chk_play_ticket_sound.grid(column=1, row=group_row_count, sticky = W)
 
     group_row_count +=1
 
-    global lbl_captcha_sound_filename
-    lbl_captcha_sound_filename = Label(frame_group_header, text=translate[language_code]['captcha_sound_filename'])
-    lbl_captcha_sound_filename.grid(column=0, row=group_row_count, sticky = E)
+    global lbl_play_order_sound
+    lbl_play_order_sound = Label(frame_group_header, text=translate[language_code]['play_order_sound'])
+    lbl_play_order_sound.grid(column=0, row=group_row_count, sticky = E)
 
-    global txt_captcha_sound_filename
-    txt_captcha_sound_filename_value = StringVar(frame_group_header, value=captcha_sound_filename)
-    txt_captcha_sound_filename = Entry(frame_group_header, width=30, textvariable = txt_captcha_sound_filename_value)
-    txt_captcha_sound_filename.grid(column=1, row=group_row_count, sticky = W)
+    global chk_state_play_order_sound
+    chk_state_play_order_sound = BooleanVar()
+    chk_state_play_order_sound.set(config_dict["advanced"]["play_sound"]["order"])
+
+    global chk_play_order_sound
+    chk_play_order_sound = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_play_order_sound)
+    chk_play_order_sound.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_play_sound_filename
+    lbl_play_sound_filename = Label(frame_group_header, text=translate[language_code]['play_sound_filename'])
+    lbl_play_sound_filename.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_play_sound_filename
+    txt_play_sound_filename_value = StringVar(frame_group_header, value=play_sound_filename)
+    txt_play_sound_filename = Entry(frame_group_header, width=30, textvariable = txt_play_sound_filename_value)
+    txt_play_sound_filename.grid(column=1, row=group_row_count, sticky = W)
 
     icon_play_filename = "icon_play_1.gif"
     icon_play_img = PhotoImage(file=icon_play_filename)
@@ -2108,6 +2037,31 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     group_row_count +=1
 
+    global lbl_kktix_status_api
+    lbl_kktix_status_api = Label(frame_group_header, text=translate[language_code]['kktix_status_api'])
+    lbl_kktix_status_api.grid(column=0, row=group_row_count, sticky = E)
+
+    global chk_state_kktix_status_api
+    chk_state_kktix_status_api = BooleanVar()
+    chk_state_kktix_status_api.set(config_dict["advanced"]["kktix_status_api"])
+
+    global chk_kktix_status_api
+    chk_kktix_status_api = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_kktix_status_api)
+    chk_kktix_status_api.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_max_dwell_time
+    lbl_max_dwell_time = Label(frame_group_header, text=translate[language_code]['max_dwell_time'])
+    lbl_max_dwell_time.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_max_dwell_time
+    txt_max_dwell_time_value = StringVar(frame_group_header, value=config_dict["advanced"]["max_dwell_time"])
+    txt_max_dwell_time = Entry(frame_group_header, width=30, textvariable = txt_max_dwell_time_value)
+    txt_max_dwell_time.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
     global lbl_reset_browser_interval
     lbl_reset_browser_interval = Label(frame_group_header, text=translate[language_code]['reset_browser_interval'])
     lbl_reset_browser_interval.grid(column=0, row=group_row_count, sticky = E)
@@ -2127,6 +2081,17 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
     txt_proxy_server_port_value = StringVar(frame_group_header, value=config_dict["advanced"]["proxy_server_port"])
     txt_proxy_server_port = Entry(frame_group_header, width=30, textvariable = txt_proxy_server_port_value)
     txt_proxy_server_port.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_window_size
+    lbl_window_size = Label(frame_group_header, text=translate[language_code]['window_size'])
+    lbl_window_size.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_window_size
+    txt_window_size_value = StringVar(frame_group_header, value=config_dict["advanced"]["window_size"])
+    txt_window_size = Entry(frame_group_header, width=30, textvariable = txt_window_size_value)
+    txt_window_size.grid(column=1, row=group_row_count, sticky = W)
 
     group_row_count +=1
 
@@ -2210,7 +2175,8 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global lbl_verbose
     lbl_verbose = Label(frame_group_header, text=translate[language_code]['verbose'])
-    lbl_verbose.grid(column=0, row=group_row_count, sticky = E)
+    # maybe enable in future.
+    #lbl_verbose.grid(column=0, row=group_row_count, sticky = E)
 
     global chk_state_verbose
     chk_state_verbose = BooleanVar()
@@ -2218,19 +2184,20 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global chk_verbose
     chk_verbose = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_verbose)
-    chk_verbose.grid(column=1, row=group_row_count, sticky = W)
+    # maybe enable in future.
+    #chk_verbose.grid(column=1, row=group_row_count, sticky = W)
 
     group_row_count +=1
 
     global lbl_ocr_captcha
-    lbl_ocr_captcha = Label(frame_group_header, text=translate[language_code]['ocr_captcha'])
+    lbl_ocr_captcha = Label(frame_group_header, text=translate[language_code]["ocr_captcha"])
     lbl_ocr_captcha.grid(column=0, row=group_row_count, sticky = E)
 
     frame_group_ddddocr_enable = Frame(frame_group_header)
 
     global chk_state_ocr_captcha
     chk_state_ocr_captcha = BooleanVar()
-    chk_state_ocr_captcha.set(config_dict['ocr_captcha']["enable"])
+    chk_state_ocr_captcha.set(config_dict["ocr_captcha"]["enable"])
 
     global chk_ocr_captcha
     chk_ocr_captcha = Checkbutton(frame_group_ddddocr_enable, text=translate[language_code]['enable'], variable=chk_state_ocr_captcha, command=showHideOcrCaptchaWithSubmit)
@@ -2238,7 +2205,7 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global lbl_ocr_captcha_not_support_arm
     lbl_ocr_captcha_not_support_arm = Label(frame_group_ddddocr_enable, fg="red", text=translate[language_code]['ocr_captcha_not_support_arm'])
-    if is_arm():
+    if util.is_arm():
         lbl_ocr_captcha_not_support_arm.grid(column=1, row=0, sticky = E)
 
     frame_group_ddddocr_enable.grid(column=1, row=group_row_count, sticky = W)
@@ -2251,7 +2218,7 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global chk_state_ocr_captcha_ddddocr_beta
     chk_state_ocr_captcha_ddddocr_beta = BooleanVar()
-    chk_state_ocr_captcha_ddddocr_beta.set(config_dict['ocr_captcha']["beta"])
+    chk_state_ocr_captcha_ddddocr_beta.set(config_dict["ocr_captcha"]["beta"])
 
     global chk_ocr_captcha_ddddocr_beta
     chk_ocr_captcha_ddddocr_beta = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_ocr_captcha_ddddocr_beta)
@@ -2268,7 +2235,7 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 
     global chk_state_ocr_captcha_force_submit
     chk_state_ocr_captcha_force_submit = BooleanVar()
-    chk_state_ocr_captcha_force_submit.set(config_dict['ocr_captcha']["force_submit"])
+    chk_state_ocr_captcha_force_submit.set(config_dict["ocr_captcha"]["force_submit"])
 
     global chk_ocr_captcha_force_submit
     chk_ocr_captcha_force_submit = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_ocr_captcha_force_submit)
@@ -2356,7 +2323,7 @@ def ServerTab(root, config_dict, language_code, UI_PADDING_X):
     lbl_server_url = Label(frame_group_header, text=translate[language_code]['server_url'])
     lbl_server_url.grid(column=0, row=group_row_count, sticky = E)
 
-    local_ip = get_ip_address()
+    local_ip = util.get_ip_address()
     ip_address = "http://%s:%d/" % (local_ip, CONST_SERVER_PORT)
     global lbl_ip_address
     lbl_ip_address = Label(frame_group_header, text=ip_address)
@@ -2454,7 +2421,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_facebook_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_facebook_password
-    txt_facebook_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["facebook_password"].strip()))
+    txt_facebook_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["facebook_password"].strip()))
     txt_facebook_password = Entry(frame_group_header, width=15, textvariable = txt_facebook_password_value, show="*")
     txt_facebook_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2470,7 +2437,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_kktix_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_kktix_password
-    txt_kktix_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["kktix_password"].strip()))
+    txt_kktix_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["kktix_password"].strip()))
     txt_kktix_password = Entry(frame_group_header, width=15, textvariable = txt_kktix_password_value, show="*")
     txt_kktix_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2486,7 +2453,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_fami_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_fami_password
-    txt_fami_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["fami_password"].strip()))
+    txt_fami_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["fami_password"].strip()))
     txt_fami_password = Entry(frame_group_header, width=15, textvariable = txt_fami_password_value, show="*")
     txt_fami_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2502,7 +2469,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_cityline_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_cityline_password
-    txt_cityline_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["cityline_password"].strip()))
+    txt_cityline_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["cityline_password"].strip()))
     txt_cityline_password = Entry(frame_group_header, width=15, textvariable = txt_cityline_password_value, show="*")
     txt_cityline_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2518,7 +2485,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_urbtix_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_urbtix_password
-    txt_urbtix_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["urbtix_password"].strip()))
+    txt_urbtix_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["urbtix_password"].strip()))
     txt_urbtix_password = Entry(frame_group_header, width=15, textvariable = txt_urbtix_password_value, show="*")
     txt_urbtix_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2534,7 +2501,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_hkticketing_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_hkticketing_password
-    txt_hkticketing_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["hkticketing_password"].strip()))
+    txt_hkticketing_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["hkticketing_password"].strip()))
     txt_hkticketing_password = Entry(frame_group_header, width=15, textvariable = txt_hkticketing_password_value, show="*")
     txt_hkticketing_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2550,7 +2517,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_kham_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_kham_password
-    txt_kham_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["kham_password"].strip()))
+    txt_kham_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["kham_password"].strip()))
     txt_kham_password = Entry(frame_group_header, width=15, textvariable = txt_kham_password_value, show="*")
     txt_kham_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2566,7 +2533,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_ticket_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_ticket_password
-    txt_ticket_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["ticket_password"].strip()))
+    txt_ticket_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["ticket_password"].strip()))
     txt_ticket_password = Entry(frame_group_header, width=15, textvariable = txt_ticket_password_value, show="*")
     txt_ticket_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2582,7 +2549,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_udn_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_udn_password
-    txt_udn_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["udn_password"].strip()))
+    txt_udn_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["udn_password"].strip()))
     txt_udn_password = Entry(frame_group_header, width=15, textvariable = txt_udn_password_value, show="*")
     txt_udn_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2598,7 +2565,7 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
     txt_ticketplus_account.grid(column=1, row=group_row_count, sticky = W)
 
     global txt_ticketplus_password
-    txt_ticketplus_password_value = StringVar(frame_group_header, value=decryptMe(config_dict["advanced"]["ticketplus_password"].strip()))
+    txt_ticketplus_password_value = StringVar(frame_group_header, value=util.decryptMe(config_dict["advanced"]["ticketplus_password"].strip()))
     txt_ticketplus_password = Entry(frame_group_header, width=15, textvariable = txt_ticketplus_password_value, show="*")
     txt_ticketplus_password.grid(column=2, row=group_row_count, sticky = W)
 
@@ -2610,33 +2577,6 @@ def AutofillTab(root, config_dict, language_code, UI_PADDING_X):
 
     frame_group_header.grid(column=0, row=row_count, padx=UI_PADDING_X)
 
-def is_text_match_keyword(keyword_string, text):
-    is_match_keyword = True
-    if len(keyword_string) > 0 and len(text) > 0:
-        is_match_keyword = False
-        keyword_array = []
-        try:
-            keyword_array = json.loads("["+ keyword_string +"]")
-        except Exception as exc:
-            keyword_array = []
-        for item_list in keyword_array:
-            if len(item_list) > 0:
-                if ' ' in item_list:
-                    keyword_item_array = item_list.split(' ')
-                    is_match_all = True
-                    for each_item in keyword_item_array:
-                        if not each_item in text:
-                            is_match_all = False
-                    if is_match_all:
-                        is_match_keyword = True
-                else:
-                    if item_list in text:
-                        is_match_keyword = True
-            else:
-                is_match_keyword = True
-            if is_match_keyword:
-                break
-    return is_match_keyword
 
 def change_maxbot_status_by_keyword():
     config_filepath, config_dict = load_json()
@@ -2645,24 +2585,24 @@ def change_maxbot_status_by_keyword():
     current_time = system_clock_data.strftime('%H:%M:%S')
     #print('Current Time is:', current_time)
     if len(config_dict["advanced"]["idle_keyword"]) > 0:
-        is_matched = is_text_match_keyword(config_dict["advanced"]["idle_keyword"], current_time)
+        is_matched =  util.is_text_match_keyword(config_dict["advanced"]["idle_keyword"], current_time)
         if is_matched:
             #print("match to idle:", current_time)
             do_maxbot_idle()
     if len(config_dict["advanced"]["resume_keyword"]) > 0:
-        is_matched = is_text_match_keyword(config_dict["advanced"]["resume_keyword"], current_time)
+        is_matched =  util.is_text_match_keyword(config_dict["advanced"]["resume_keyword"], current_time)
         if is_matched:
             #print("match to resume:", current_time)
             do_maxbot_resume()
     
     current_time = system_clock_data.strftime('%S')
     if len(config_dict["advanced"]["idle_keyword_second"]) > 0:
-        is_matched = is_text_match_keyword(config_dict["advanced"]["idle_keyword_second"], current_time)
+        is_matched =  util.is_text_match_keyword(config_dict["advanced"]["idle_keyword_second"], current_time)
         if is_matched:
             #print("match to idle:", current_time)
             do_maxbot_idle()
     if len(config_dict["advanced"]["resume_keyword_second"]) > 0:
-        is_matched = is_text_match_keyword(config_dict["advanced"]["resume_keyword_second"], current_time)
+        is_matched =  util.is_text_match_keyword(config_dict["advanced"]["resume_keyword_second"], current_time)
         if is_matched:
             #print("match to resume:", current_time)
             do_maxbot_resume()
@@ -2671,7 +2611,9 @@ def change_maxbot_status_by_keyword():
 
 def check_maxbot_config_unsaved(config_dict):
     # alert not saved config.
+    global combo_homepage
     global combo_ticket_number
+
     global txt_date_keyword
     global txt_area_keyword
     global txt_keyword_exclude
@@ -2682,31 +2624,56 @@ def check_maxbot_config_unsaved(config_dict):
     global txt_resume_keyword_second
 
     try:
-        date_keyword = txt_date_keyword.get("1.0",END).strip()
-        date_keyword = format_config_keyword_for_json(date_keyword)
+        date_keyword = ""
+        if 'txt_date_keyword' in globals():
+            date_keyword = txt_date_keyword.get("1.0",END).strip()
+            date_keyword = util.format_config_keyword_for_json(date_keyword)
 
-        area_keyword = txt_area_keyword.get("1.0",END).strip()
-        area_keyword = format_config_keyword_for_json(area_keyword)
+        area_keyword = ""
+        if 'txt_area_keyword' in globals():
+            area_keyword = txt_area_keyword.get("1.0",END).strip()
+            area_keyword = util.format_config_keyword_for_json(area_keyword)
 
-        keyword_exclude = txt_keyword_exclude.get("1.0",END).strip()
-        keyword_exclude = format_config_keyword_for_json(keyword_exclude)
+        keyword_exclude = ""
+        if 'txt_keyword_exclude' in globals():
+            keyword_exclude = txt_keyword_exclude.get("1.0",END).strip()
+            keyword_exclude = util.format_config_keyword_for_json(keyword_exclude)
 
-        idle_keyword = txt_idle_keyword.get("1.0",END).strip()
-        idle_keyword = format_config_keyword_for_json(idle_keyword)
+        idle_keyword = ""
+        if 'txt_idle_keyword' in globals():
+            idle_keyword = txt_idle_keyword.get("1.0",END).strip()
+            idle_keyword = util.format_config_keyword_for_json(idle_keyword)
 
-        resume_keyword = txt_resume_keyword.get("1.0",END).strip()
-        resume_keyword = format_config_keyword_for_json(resume_keyword)
+        resume_keyword = ""
+        if 'txt_resume_keyword' in globals():
+            resume_keyword = txt_resume_keyword.get("1.0",END).strip()
+            resume_keyword = util.format_config_keyword_for_json(resume_keyword)
 
-        idle_keyword_second = txt_idle_keyword_second.get("1.0",END).strip()
-        idle_keyword_second = format_config_keyword_for_json(idle_keyword_second)
+        idle_keyword_second = ""
+        if 'txt_idle_keyword_second' in globals():
+            idle_keyword_second = txt_idle_keyword_second.get("1.0",END).strip()
+            idle_keyword_second = util.format_config_keyword_for_json(idle_keyword_second)
 
-        resume_keyword_second = txt_resume_keyword_second.get("1.0",END).strip()
-        resume_keyword_second = format_config_keyword_for_json(resume_keyword_second)
+        resume_keyword_second = ""
+        if 'txt_resume_keyword_second' in globals():
+            resume_keyword_second = txt_resume_keyword_second.get("1.0",END).strip()
+            resume_keyword_second = util.format_config_keyword_for_json(resume_keyword_second)
 
         highlightthickness = 0
-        if len(combo_ticket_number.get().strip())>0:
-            if config_dict["ticket_number"] != int(combo_ticket_number.get().strip()):
-                highlightthickness = 2
+        if 'combo_homepage' in globals():
+            if len(combo_homepage.get().strip())>0:
+                if config_dict["homepage"] != combo_homepage.get().strip():
+                    highlightthickness = 2
+        
+        if highlightthickness > 0:
+            showHideBlocks()
+
+        highlightthickness = 0
+        if 'combo_ticket_number' in globals():
+            if len(combo_ticket_number.get().strip())>0:
+                if config_dict["ticket_number"] != int(combo_ticket_number.get().strip()):
+                    highlightthickness = 2
+        # fail, tkinter combobox border style is not working anymore
         #combo_ticket_number.config(highlightthickness=highlightthickness, highlightbackground="red")
 
         highlightthickness = 0
@@ -2744,10 +2711,10 @@ def check_maxbot_config_unsaved(config_dict):
             highlightthickness = 2
         txt_resume_keyword_second.config(highlightthickness=highlightthickness, highlightbackground="red")
     except Exception as exc:
-        print(exc)
+        #print(exc)
         pass
 
-def resetful_api_timer():
+def settgins_gui_timer():
     while True:
         btn_preview_text_clicked()
         preview_question_text_file()
@@ -2758,7 +2725,7 @@ def resetful_api_timer():
             break
 
 def clean_extension_status():
-    Root_Dir = get_app_root()
+    Root_Dir = util.get_app_root()
     webdriver_path = os.path.join(Root_Dir, "webdriver")
     target_path = os.path.join(webdriver_path, CONST_MAXBOT_EXTENSION_NAME)
     target_path = os.path.join(target_path, "data")
@@ -2771,17 +2738,18 @@ def clean_extension_status():
             pass
 
 def sync_status_to_extension(status):
-    Root_Dir = get_app_root()
+    Root_Dir = util.get_app_root()
     webdriver_path = os.path.join(Root_Dir, "webdriver")
     target_path = os.path.join(webdriver_path, CONST_MAXBOT_EXTENSION_NAME)
     target_path = os.path.join(target_path, "data")
-    target_path = os.path.join(target_path, CONST_MAXBOT_EXTENSION_STATUS_JSON)
-    #print("save as to:", target_path)
-    status_json={}
-    status_json["status"]=status
-    #print("dump json to path:", target_path)
-    with open(target_path, 'w') as outfile:
-        json.dump(status_json, outfile)
+    if os.path.exists(target_path):
+        target_path = os.path.join(target_path, CONST_MAXBOT_EXTENSION_STATUS_JSON)
+        #print("save as to:", target_path)
+        status_json={}
+        status_json["status"]=status
+        #print("dump json to path:", target_path)
+        with open(target_path, 'w') as outfile:
+            json.dump(status_json, outfile)
 
 def update_maxbot_runtime_status():
     is_paused = False
@@ -2790,17 +2758,21 @@ def update_maxbot_runtime_status():
 
     sync_status_to_extension(not is_paused)
 
+    global combo_language
+    global lbl_maxbot_status_data
     try:
-        global combo_language
-        new_language = combo_language.get().strip()
-        language_code=get_language_code_by_name(new_language)
+        language_code = ""
+        if 'combo_language' in globals():
+            new_language = combo_language.get().strip()
+            language_code=get_language_code_by_name(new_language)
 
-        global lbl_maxbot_status_data
-        maxbot_status = translate[language_code]['status_enabled']
-        if is_paused:
-            maxbot_status = translate[language_code]['status_paused']
+        if len(language_code) > 0:
+            maxbot_status = translate[language_code]['status_enabled']
+            if is_paused:
+                maxbot_status = translate[language_code]['status_paused']
 
-        lbl_maxbot_status_data.config(text=maxbot_status)
+            if 'lbl_maxbot_status_data' in globals():
+                lbl_maxbot_status_data.config(text=maxbot_status)
 
         global btn_idle
         global btn_resume
@@ -2816,13 +2788,16 @@ def update_maxbot_runtime_status():
         last_url = read_last_url_from_file()
         if len(last_url) > 60:
             last_url=last_url[:60]+"..."
-        lbl_maxbot_last_url_data.config(text=last_url)
+        if 'lbl_maxbot_last_url_data' in globals():
+            lbl_maxbot_last_url_data.config(text=last_url)
 
-        global lbl_system_clock_data
         system_clock_data = datetime.now()
         current_time = system_clock_data.strftime('%H:%M:%S')
         #print('Current Time is:', current_time)
-        lbl_system_clock_data.config(text=current_time)
+        
+        global lbl_system_clock_data
+        if 'lbl_system_clock_data' in globals():
+            lbl_system_clock_data.config(text=current_time)
 
     except Exception as exc:
         #print(exc)
@@ -3028,7 +3003,7 @@ def get_action_bar(root, language_code):
     btn_run = ttk.Button(frame_action, text=translate[language_code]['run'], command= lambda: btn_run_clicked(language_code))
     btn_run.grid(column=0, row=0)
 
-    btn_save = ttk.Button(frame_action, text=translate[language_code]['save'], command= lambda: btn_save_clicked(language_code) )
+    btn_save = ttk.Button(frame_action, text=translate[language_code]['save'], command= lambda: btn_save_clicked() )
     btn_save.grid(column=1, row=0)
 
     btn_exit = ttk.Button(frame_action, text=translate[language_code]['exit'], command=btn_exit_clicked)
@@ -3098,15 +3073,12 @@ def load_GUI(root, config_dict):
     RuntimeTab(tab6, config_dict, language_code, UI_PADDING_X)
     AboutTab(tab7, language_code)
 
-
-def main():
+def main_gui():
     global translate
-    # only need to load translate once.
     translate = load_translate()
 
     global config_filepath
     global config_dict
-    # only need to load json file once.
     config_filepath, config_dict = load_json()
 
     global root
@@ -3119,28 +3091,27 @@ def main():
 
     load_GUI(root, config_dict)
 
-    GUI_SIZE_WIDTH = 580
-    GUI_SIZE_HEIGHT = 590
+    GUI_SIZE_WIDTH = 590
+    GUI_SIZE_HEIGHT = 645
 
     GUI_SIZE_MACOS = str(GUI_SIZE_WIDTH) + 'x' + str(GUI_SIZE_HEIGHT)
-    GUI_SIZE_WINDOWS=str(GUI_SIZE_WIDTH-60) + 'x' + str(GUI_SIZE_HEIGHT-70)
+    GUI_SIZE_WINDOWS=str(GUI_SIZE_WIDTH-70) + 'x' + str(GUI_SIZE_HEIGHT-80)
+    GUI_SIZE_LINUX=str(GUI_SIZE_WIDTH-50) + 'x' + str(GUI_SIZE_HEIGHT-140)
 
     GUI_SIZE =GUI_SIZE_MACOS
-
     if platform.system() == 'Windows':
         GUI_SIZE = GUI_SIZE_WINDOWS
+    if platform.system() == 'Linux':
+        GUI_SIZE = GUI_SIZE_LINUX
 
     root.geometry(GUI_SIZE)
-
-    # for icon.
-    icon_filepath = 'tmp.ico'
 
     # icon format.
     iconImg = 'AAABAAEAAAAAAAEAIAD4MgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAEAAAABAAgGAAAAXHKoZgAAAAFzUkdCAK7OHOkAAABQZVhJZk1NACoAAAAIAAIBEgADAAAAAQABAACHaQAEAAAAAQAAACYAAAAAAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAQCgAwAEAAAAAQAAAQAAAAAAdTc0VwAAAVlpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDUuNC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPgogICAgICA8L3JkZjpEZXNjcmlwdGlvbj4KICAgPC9yZGY6UkRGPgo8L3g6eG1wbWV0YT4KTMInWQAAMPFJREFUeAHtndmTJNd13rP36e7pWXt6OFiHGAxACssApChTskRZom1J3ETS9ov/AIclO/Tm8JMj/OxQBMNhO0IRdvjNtB0SSYirTFEiJZoSTBAidoAAZjCYAYazb73M9O7vdzKzOqu6qmvLyr5VeW5MT3VXVea997s3v3vOueecO/SlmYnNyIsj4AiUEoHhUvbaO+0IOAKGgBOATwRHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECDgBlHjwveuOgBOAzwFHoMQIOAGUePC9646AE4DPAUegxAg4AZR48L3rjoATgM8BR6DECIzuWt83N3et6oGpeGioflf6FFtmhPWoUb/q9zafd4VZpf587ljIXSpt7hCz4glADR0ZH49GJiai4dHRaGh4JErbbvOW/2wweAVD+68QMPupks2NzWhlfj7a3FivavbQ8HA0PjMjXPtRuBuK1u7eidbu3KnqUxF/jAmzkbFxVdVv820o2lhbjVYWFuy5aRer4glALYQAJg/PRlNzc9H00Q/o9aj9znt7Dh6MJvbtj8amp6ORPXs0KGPR0MiIloYhWx02Y5aAI+IO2y/tdru/v8/DffPM6eh7f/D70Z1r1wRNLAlsbmxEhz704eiTX/pP0fi+fR1NiN1EhnF+/X99OfrJl/6wMAJjPk3NHok++R//c3TgoRMi1I3dhKDtusHswt/+KPrBv/030cbqStvXF08AAnzl9u1oWT9MYiYvnRgeHYtG90zYgz8+s09EcCianD0cTR2Zi6ZEEtMpSRw5Ek3qs4n9B6KxvXuj0clJkyTa7nmfXzD/3nvRqlg/ffjpDpN37tRT0T2//CuFPUB5w3jw5MlC2765vh7d92ufiD7425+yhSnv/hRxv6uvvhJtSgropBRPALQyWc3TBjMI6/xI/Lt784Zmsj4RUcSrPd/XP6kKqAwj4yKJqSkTcycOHIgmDx2OJkUK00clRSREwd+8z+eQydjUpF1nkkRaaZ+/XnnpBROVs33i96NPfaTQByhvGMen91r7i1qJmUuPfPGf9u3DD/4LF96PNvT8dKL27Q4BNJo1Rgw87fEXkpfKtyGKtaXFaFU/S1cuV5OEvgUAw0gTUjGQDMYlIUzsOxDtOSRpQqRgKsecpAmRxaQki8nZROUQSYxK5RjFLiGVI/SysbYWXX7pRSPICkYizHH14ciTp0Jv/o7tG4MANIZFEADzafaxx6P7fvUTO7Yp9A8Xf37B8Op/AmgF6VR60Cul8gAk1yI1rC8vS5q4G929fl0k8e6WJMH3uR6S0IM+KhsDtgb05T0HUDkSuwTqhtkmpH5IP4RAzC6ByqFrIJis6J1UXdgL/brx5s+q2kC/p4/dEx04caKwdvSiIlZkJL2NFemzyRj3oh67pxaME5/9XRv3ntXR4xtDYgsXL3ZcS1gSQMfdqHMhD3oDkuDbG6uynGqSLd+6FUUXxKB6gPRffCOuRZrQREQqGDWVA5KQNHE4sUuIJEztgCwkXeyRysHnWOBHJ6dsl6MTRq7Tk21v3X73bDQvsS97f1bMQ49+yNqy7YI+egOsi5DCwGvvPfdGJz71mT5CZ3tT15bvRkuXLm1fCbd/te47g0sAdbtb82YTkoBdVxcXoxX9LF1uoHKIJIa1fTQmlQOjZGyXQJpA5ciQhHY80l0Os0tMQxKSJnR9u+Xqa6+aITW7QkJ2GABpSz8XCICdH6i4VrrLs18QwAO/8ZvRwUcezfO2hd9rdWFRO0FXK4tduw1of/a1W0O/fx+SoA96tRf7f+s/JtK6WBgD5p3r16JIq3PFeKmvVascIgmpHBP7k12OZCvUjJcYMc0ukVU5ZJfYIwMmdomkfmrGAIgdIEse2Dzmnnp6q2F9+hsqFoZek8Yyfc61O5L0sA898oV/UoVhrnUUdDMk2OVbN1VbZ3TpBJDXQEEUDUiCKrZUjpuy2r4XaxuJymEkYSrHmHwf0l2OfbE0AUlgwBRB4DOx58DB6MKzz1bq4t6QEEbOQ498iD/7uqBygUEvC3hBlvd8/Fd6WU0h976rRQcnoHTutVupE0C7iHXz/WYksb4WbSzEXl2L6HUiiCppItnlMPFYhsy0bG5uRAdPPCwj4LH0rb59xUN0VKpRzJC96QZG4Id/9wtGsL2pobi7Ll6+ZAbvrITYTu1OAO2gVcR3IQnqaSBNZAmh0hwxAtt/WND7vWDDwIjaq8Lqv//B49EHf+t3elVFofdd1A7AugzanUoA/egwXijA/VAZrtVzcgAahGLbsyKyODQn/x5BoA/+o39sbr/53734O8Y+ANXxIO20wgmgHbQC/C4TGrfp2V94LMDWtd8kDJsmySQ7su3fYYcrhBX+HCc//8WqLdQdrgj+o4Wf/1zqUufNdALoHLswrpRIu+/48Wjm/vvDaE+XrcCTk52SXpQNYfWBX/yYfn6pF7cv/J7rK8vyAejcCYgGOwEUPmz5VogEcOSxJ7S1uD/fG+/S3TDQ4U/RizIi6YLVny3AQShrS0tyib/Ssf4PBk4AfT4TEJnnnmb/v7N94BC7T0BQ3sWMfw+diI5L/x+Usqx8EHdvyN09MRh30i8ngE5QC+Uarf64Hh954slQWpRLO0wCyJvPhBWW/30PPJhLG0O4yfKNG0oKc7srCaCYbUAYSgNAsW0sfk//jt+1//2/xggMDQ1vM1yxqs3ce1+0//gHG1/Yh59YRqM8JRrNNQK6Tmrvf5AK4v+q1IBuJICeEwDbOkTUEYpLIA2ebHGMfhwww+cEtaT7mEYQbALBFxmiGKSBa7cv4HPj9NvRW898NSI+IS1gdfjDvyBcZ9O3BuLVdHT1Oa9CrDxef4PgKp3FZFEGwHWiJrsoPScAXGCX5K1Eoo84/FYBMzJYxRl/6qQFI/w2kxaMazAMlb28+F//KHrzK39cBQPEwKTGcj5IxXICQAC2CnTfM7wLT8rvn3iJQSqL2gLcVExIN89HzwkAwGHgDSV6xGpJDjsG1hSCZIArvvCSBoiQG1OkXJwW7GCcO9B84eNEHkTYEWk3SYx+Ji0YzjDZ8NhBGmhE/YvP/bg6AEjYsV9+RBGAg1awATCWWWmn0z5yD6QkIv8GrSyQCETzoBtzSSEEUAFetoBU1K/XaCLcNlbnFdwwH+HiaESRkAT3YFJg9TZ/cbmLjs8gTSgtmFQLSCGbFsxi9CUaxzH6yvijh4VAk27YstKPgn/B0nv1lZcr2FE9A08U4cGHTxbcmt5XNzY1bVINaeK6LppzDynmf6+SpQxSYVFdvCgnoC5LsQTQSmMhCb6nV3ux/7f+YzVEksD4cefqlbokwUNOiufRSaSJROWQxGAkIVtEHKdPNuI4Rn+iRuWwMNuk/q2ad++3W++ciW6fO1cl4YDDoZOPWITg7rWsNzUjAZIklsxO6TzopCYjSUmPDyvrz6AVws8tR0WX8zQ8AmhlpJqQBJIDXlLE6d/VVsn8+XOxb3m8EWErKSTBg46NgXyAE5aJ+KAZ1OLcgWmSUXIHJjH6kjYwUFkm4gLTgl1R/r/l28pclBlsJCnEf6ShQSsmAYx1PzUR/8n3N/v4E4MGkaTk7hKBpIB0j3J6pxBfIYrkoWmkcnC4Bg4VGFSqVA5dUJ2JWElGtec+sR+7RJKJmHRgJPKwtGBIE2km4hllCErSgnVroBOZXXz+J9X6v7DmwT8qA+AgljgpyLjZieqNW6t9hqhP9nnG30Z9JQmIpbPLLAqNvrvT+4NNADv1PP0MkuD3BkTBKrKVibi+ylGVibhG5aikBUsz/mCXkMoxboefYJdI0oI1GMi7N29GV15+qUJkNJX4f9KLcQjIIBY7EAbJBvtPA1ya9ZtxmxVB3q+c/4NYSAO2uqhEIF12zgmgFQCbkQQqRzYT8Tl2OTR5a1UO7XLYVqiMXJaJWERgmYjTw09SacLSlR8y55Ubb78V3T57tkb/34z2P/RQtFdOQINYTAIgKUg3RWP28GfI+Hukm7sEey36/5oyX3dKkGnHnABSJPJ4hSiSFaseM1fSgqHPJ1s4tspRN9cmuxzZTMSwiOV8S+5rzRTh4P47KEEttdBbUhDZZirY1H6hyd8YSPfec0/00Kf7O+PvTt1kB4Bds3S+7fTdnT5zAtgJnV58xoOO4Bb/21YDomtVJmJ9o9a/Ae9JTgAa1IJPRzdZgSCAB/7Bb1qa9EHFaIFU9porQzJkd1O6u7qbmv3axggYSejj7KqfflurP+7Us48/nr4zcK8QHE5OHTm5CB8kIzz/bDt34NBRh9THPHwAgCY/h+tBBDrAPrG6zTzwwEBFtdXC3E1SEPBhe5QDUge1sMVNHEAexQkgDxQLvAerIum/JiQFDGrBR6PTrEBDI8PRyc99waSkQcXHnOC6TASSYuMEkCLRJ688HHNP9/cJwM2gxuaBB2e7xaSj+x/QUd+DkfG3Uf9Xbt+OT9GupyI2uqjB+04ADYAJ8u1Evz3yRH+fANwKtp3scOAfcfyTyvirMxIGuXA47Mrt+a53AMDICaCPZgriP0Et/X4CcCuQjynQq64RtNHFwsYy/n5hcDL+NurqkmJg1u50lwgkvXdPdgGYqNV7uIlHTFqrvzZFgAxAtQ8AIq6dADygzi1ZUManZ9pa4Szj70eV8fdjg5HxN4tF7e95JAJJ75k7AZin2175wk/pUEsd8mhbMdLpzGFBxGBUkBCEEUXaktRtrvJ3mX8ZMisvOd+yJACGlgBE22SDXiwnQBs6LvMszvg7M+jQWNyK+QB0G2cipHInAJ5tM+LI3ZUDKyu+8GnADG6upAXbt8/2es3vW6GfWG8rkx0BAkKoEAVjatQx8IMrEOThtRp971//XnTmO9+q2su2E4BPDWYAUO3Amg1AC0e1JFn7rfhvJCPyIgxSxt/6PY3fNScgPRv1vE13uq7eZ7kTACG4i5fuxI4KPMAUDeTwsMJvxzO+8DVHZE9bZF0coz+V+MKPK3UYE4EjsnEOKUvBz5sQ5qybJ5OcMOV+P8++1TFkGxB/ANxdmxbNM8v4qzP/Br2Ax+IlRa7mVHInANplE7dGfMNCWwmYQbR9H3JPVvn4IpFEJuMPATMKv0VaqA6/FUkcVVKPWSUZVZKPOOPPjLmOEiJb6zabE06F3ubWu+9E8xfer+oLBHDgxEkZAT9QaFt2qzIIwNxcmxGA5hD5JTnttwxlLadEIClWPSGA9OZ1X0UM6cpWT4Sx/IGLi9GKfkgmigiYtRXwgKPvmb+4JAN0xYkDSguWZPyxZB5KlVWJ0Z8lRv+gLMSoHNM6ez4Jv63buDDevPbaq9rmub2lEiXNmnvyVFc+8mH0rrVWxGnBRqN1FomaxSR7B+bLsY//cnT06XKoRqsLC9Gd69cqz1AWi05+L54AWmklJMH3koGvJQpWQ0Ih15RoFDCid89WkwTXS3xEbUB9YDWBACqZiC389micQ1CqB7H1SBNkK8YBhVRiRKSlRNVKk/P8zuUXX6ybAAQHoLIU7B0jUhlXm3QYqe8R+f13EzzUpIqgPiY/xMqtW5Vno9vGhUkArfaKB70BSXCLSvitsqcsSKRuVeXg/AKSilbsEqZyKBMxGX9ICybVhAnXC5UDhr/26itVA0y7JyXmkt22LCUmgAkzBifLwbaub24o46+SojzwG5/c9tmgvnHnKolAFnMxAIJRfxNAK6PcjCQkQm50oHIgTUASeascC4rzvnX2nQqxWRcl8ew/rhOA7xuME4BbGbY4Kci4VEB9u1YETG+gzyzjr2L/y1JQi9fudpcsNYvV4BNAtreNfock+KyBNNGeypFkIt5J5Uh2OeqpHDfeelPZjq9WGwAlAZDYclBOAG40DNn38SEZkfrWqCAVTUmVe/hzg5fxt1GfeT9OBLJaNT92+n6zz5wAmiGU/byZNKFTkFZ0VBPJGuupHBgwOaIa1WG0ssvBuQaz5jOBm++111+1jMYpGVE9Rs9BTgCShTj9fXhCSUF2yAqEI8y9v/pr0ayORi9TscNAJBHmtdvlBJD37GlGEi2oHFWDq5UOf4jZJ8o10TnXgczKjTQAbAQY/yDTshS20i17dY4ddgLIEcyWb9VE5cjeB/VjEE8Azvax3u/DoyM6r2HKtoFrP2f1n1XSj/s+8eu1Hw303+vLK3IC0tZ4jsWjAXMEsxe3Qtc9/OHH5OdwuBe3D/aeQyOj5rdRt4Ei0BOf+ZzZAOp+PqBvYv03+5D6n1dxAsgLyR7dB3VgTk4u+DWUqeAGXC8nABLR3mPHohOf/myZ4LC+riibNKdsZ+1D3YLgBNAtgr28Xqs/TkxzTw7eCcBNYdMqVy8rEARw/68r4++AHoqyEy4cEruqU6xS35edvtvqZ04ArSK1C99D/J8e0BOAW4FzmwRghLg3euSLA5zxdwdglpQHcDWnRCBpNU4AKRIBvrLaEf2Hs1EZS21OAPCYO3VKGX//fhnhkA/ARfNuzbPzTgB5opnzvRD15gb0BOBWoBpXYpmsvos95OHPfd7OVmzl+kH7jvkAaAckz9L1NiDGqdp9a0RXovj4YR/XS4sIgFmmjOh8PDIAlbWQFzCdW6z++x54MHrotz9VVjjkA6DTgDRH8tsD6DIWgIef7Sn0VDsmW77xe/S3ZfwhYEanu+CogScbA5kaL1KCiLP+aDxrJn6pRlir/MrCfPTcH/6H6Pa5d6smPAeHEuxS1oIRkHnDw48TzIOf/IfRAWX+KWMhsA0VIO/SlQSAQ8bSlcsRRxUP/ez16hh9ea9ZwIwmscXm6+Tb6fSI7DTjTyZGPyWHvDvYD/e79vpr0bM67SUr7kKSBzgBWO7BZS3jJAXRIsM8m5jZb8d9pRJB2TAh9J1nLe/npCsCSAfBGFosDUsRzkpDY/EfNSD+Fg1nMIeV/290j3zhidGfIUb/YLRHvvAWVWdpwUQUxOgr820ao29pweQWSnz/IE6AKy+/uN3BQwRA/n8MYWUtcVqw0Wht/U509KO/GB372N8rKxQmJXIeQHaRyAOMXAigqiE86Pqh1NNVSHi5Mq+AGe1nml+zJrqpBMkFQ+QOTDL+cEAkhiAy/liMvtKAkQ5seq6xysHR2hBNP5VLzz+vAKAV63fa7hGRXZkSgKT9zr6ScwHSZz5Yxl+plWUty0oEQpBZ+ATQyghBEnyvAVEg8q0tLUWcgcbep0kTGTuB2RP0kG+lBZM0oUQdDVUOSRhIGuP7yPgzbVFmTKq0/laa3KvvIDFdfvGnVW2BEOnL7GOP9aravrgvAT9ki95//IOlyfjbaGCWSASylF8ikLSe/CWA9M7dvjYhCUhhK8no9Wj+3DlpG3VUDq0gSAU7qRxmo6hSOcj4E2ci7rXKMf/e+ejG6berVRuzeA/2CcCtTA/IGnXw+G/9TrS/BBl/d8Jk6fJFm+95L1rhEsBOaGQ/gyj0Q6mrcqQx+jmpHOx6kGTU0oJJRelW5biqBKC1AR5IALOPPW71ZLu627+zSwExkoijiLL33nujz375j2UPUiBUMsa9rJeU2yRkQZrcG1iWIdRl2pf3gtT/BNDKjGgiTbSvcigTcb1dDoyY8tqzJKMtqhyXnv+JJQAZVvRbWgiEmXtKJwAXMOnTOpu9Mvl+9O//XXTslz4ePfUvf7/Z13P5nJwABx95JJd7tXKT6z97I/rGP/9n0Uf+1R9Ep/7F77VySWHfWRABYGx3AugV5E1IYrvKgcLRXOWYEBFACNldjjhl+RELd/35cz+W5JKRXbT6j8nweeTJJ3vV047uiwX68osvDPTJu6e/+XXlYzxr29YdgdSji3jwSQXWi7K17PTi7oN4T4giWZkzj22lp5VMxC2oHKS8WtH3srsWiP+InwceOlG5Zwi/3NZJRaQ5W5nXeQUDWDiN6e2vP2Mqzt577g2qh/FpW/k7AdFJJ4BeDHUTaSKrcqRkkjYDtsf7D6khpHL9jdftsBI7sCSkhuXUlvN//YMIe4x5tcqjNaSyuri0zU6UV/s8GCgvJNu9T0aSyF4KIYR4AvCVl1+K1lfXomWdWMRpPINU2E1686t/ooNmlswBDSNvSGVZiUDwA+iFIdQJIKSRVluInziiCMCQCm6o1157xeYfKsumDIKDVC6/9GL0/o9+qP4N29mLbD+GVO5eu2aegLXSYh5tdALIA8Wc7oH4j7HwkHIAhFRw7b555oxZoFcVuITX4iCVt//0ayZiw3B7773fHMxC6h/4cxSeSwAhjUoP2gIBHNQJwOihIZVbevgtEEWReRzauk7g0oCU+fPnozPf+ZY9XKyw+x54ILieWSKQHpGuSwAhDbe2FRD/cbYJqWAcwy2bFQgXbVuNQmpgF205+xffjW6ejj0xiTuYuT+849dIBLKhxaEXxQmgF6h2eE+Owzr6VGAJQLQtSbQiOxe4K2APgAQGoawuLkRvfe0rMm5KpVE/2ZadCWwLEJzToLleYN7+NqCAsug9XmmRXr20hwCiZnbvn6vBdEpHlId2AjBWf7YArc1igLXlu7E00F6Xg/z2xeeei3DEGlYEKrN5XOHpOGmFVLC3LF7qjRMQ/WyLAGBIotQIzyVOfUyiKqvWkGX8wS0mcY3JkISmdvovJFx3rS08SOjTl1/4qbl2VhoiEY+ot9BOAEb8xAlIT4k1dUMTEkNgvxfsLW8+8xULscX1OlrfsJBz5ndIJU4EcsUIuBftaosA1hVYsyxPMFYrfohZZ88U1rRsP/jCK1Bk8rACZuQCO2FpwRR+S1owfdf8mPUAVEoVUcSrYOWzAf2FMOSX//t/iy793fNVPQTP2cefVMjyvqr3d/sPgmNwA4a4KMyBFYUw93u5efp0dPbPv1vpF/hjfA0tAQvp4nqRCCQdv7YIAD2QgwnwBlu48F4s/Qs4Cg83Yi2kMKpjndlL5VBL4vCnFGo7KWIwkiA1GCRB+K0+4zvjyv02IumCazUiadsG9vWq9tQJrrGcBEkv+f3o0x8Jrs9XX3nZwlBTlYU5MAjegO/82bcUQv5uVXDNjKIP7UTigEZh+cYNc77q1XPRFgEYLnpA09Vg26MqMkBnwbPKjjB673yVncD0SBEF0gDJQi3jj/QuVAoLmJELZixNKOMPUXX6Ow6/PWCZgbCOc13eEVFFjjer59VXX6kmOuFGCOrs408U2ZSmdUFSEACrYzrWEACeaf1c7uqhekt7/6gBKbExN2fuD28LcOnqFRldlQgkHYCcgW+fAFppwE4koeuZWBY0o4fBTjvVBGOSpYUHnBXRMv7ooSc6jvBbyADJwSLrSDCaJhk9rIw/xOjvm7EIO6SJ7Oqa3jeEV1I73zr7ToVEaRMTke2n/cePh9DEShvuXr8WXZcKkBI+H9BWS01V+Vb//fL+3/xfi2zMLiQQwb4QCUCnAbOgVuxrOcPdGwJopZGQBN9LqK2W4Jhoa3e15aRtpztyhUTfqCIJrtegDStmHLENlWNC+jNGHNJpY4uAIOJMxCQZFUnIyg6RkG6aa4bHx6smdyvN7vY76NSWACQxqnE/+oX1PzQD1G1lWVq8cKFK4qKt/UwA5KTE75+TdrcWCbYAJ+UFeF+3w5v79eQBIPYiS1Z5VrJ7BNBSL0QL/GtAEtxiQ3u4K/JMW751c5tdAnIZTqUJqQ6jU7JLyDC5J00yCklUGTDTcw3Y5UCa0LkGkISIJq9iQTVy68zek8G1BCA51pNHe68r1TtG35Sk03uukJyyT8u1116Lzv/V96vwR/jE+Df9gbA8MIHYDgNBVcksGHlCHzgBtNhVpIGdSEIMuiHGx4116fKl7dIEJIE0oS1NtjaZDJbxRxIDBkxUjilZiC1duWX84fCTQ2axH5smLZikCQyYTQqqzxUFnrCKViQe/Y70MvfkqSZXF/8xZIWqtrVSxm3ABmD6c48mZS97StIPXGurHiiNAdIXEmJIBXvLQo8SgaT9HAwCSHuz0yskwecNiIKHksQL61I77kj3baxysMsRqxw4jsQqx+FE5YhJwgyY7HIkKge7HET5mU795s80+SqPv5HB9AeOBXfiDarX1VdfrYsoSUGYnFUPUd1vhvXm4qWL0dsiAMY2Wzh1CFWR8QyprEn3twVra7rk3rzyEECr0DWTJtIkoyYGx2e1VSYU1yJNYMBkl0N57VE5bJdDNgjy/t1+96w4aMsDm5WU6L+pubCSUOCsdOudOAKwCjpNxpX5BXOfbUXqqbp2l/84/4Pvx16NtaqW+IAsQKFtAeKqjP0rWbp6gp4TQCewNiEJVsc1qRsYmniQstKEidOJFELVqC4kAMGjMqRy88zpOAIw01Zrr6Yjzils947JptIvhQAmS/qh11qVBtGQLcDQJBqMrcs3b1Sk1l5g7QTQC1S5JySRvNoL/9UpbFlyBHho5ZrEfzuIIiOtWBvVL4KB1u/2V0gwh6+8/7c/MltPLdbEAoS4BUgiEA6OSe1bte3O4+8tWTSPu/k92kIA8R8j46EPBXYCsHTkK6+8JD2/fgjqqlJnYSPop0LSDx4oiLm2oK7N3BfeFiDSY68SgaQYOAGkSOzCK4bH/Q+dCO4EYCIAryURgNtg0QO0LjEaEuiXwoEmZ77z7boPP2PALgyG2NAKqcDZhellcQLoJbrN7q3JR/5/JmBIhfTfHLWWRgBm28b6ub5MRGD/BAQR9HNLNo26Or7GgIC20LIwg/mCnLB6lQgkHVMngBSJXXjFyejoU+EFAFkE4I2tCMAqaJAA5HzVLyHBJDG1pB/ywahXkADwGh3fH9YWIG01HwC1r5fFCaCX6O5wbyYe24OcARhaSSMAG7ULhyaOd++H8vPn/l908fnnzCO0bns1DhzEwpZtSIVdliU5LPW6NN8F6DED9bqDQdy/juFJsp0SUD4YXAQaOueVmgjAWgzZ5lzpg4hAjKys/nguZs9erO0PSViyrtm1n+/G3+y0EAnYyx0A+tWYADRpic9PfeEr+pMkEtInVfa2TULprZiyGwOQZ53rK6vmZZi9JxJAfALwgezbu/77XYn+N95+S/rydmt52jgerOVbihEIvNCPd7/353qIGgu6QyPDQWYCxtuyl4lA0qFrSAAMPxFS5gdf8YUnRl8/5uKqGH3L+EPAjDL+yPvNSIILE1Iw4YH/9GOkkdZaFr4QFky+F/7ov0Sv/8//UbXKEHtw9OmP9pzhU8hbfcVibhGAOzw0kBfBV6GXM99W0o/3ztc3/iWN5wTi0NKw0TRyFkACuyYBpIPMQNuKIImA3H9pjP64BcwciH3hLZGHMv7MKZGHxegrkYdi9CcPEaO/L47R115rRYoIfebk2L44OcpNcWB1ABDkeeSJsBKA0G22/+pFAFZBAgEErgKwer799eqkH1V94A/1g4jP6WP3bPtot99A/E9TsfeyLQ0lAKs0o7sygTelH6IjsgXEaaoVNSBpIWwVx+hnAmb2xWnB4ow/W2nBCMOdIkZfUViWFkyEgsSxGzH6vQSYvVzLqpuJnANLfM/xAQitXH355boRgLXttJBg9UNLVO1HQfz93o9+qMjLlzQfG4v/jAOZmKYCOwwUAJcUuIQhsNdlZwJoVDsPejLw9YYfklhR4y1xhPYyARqysMK1ScAMyUKJkhsn409NWjBL5iGSqEoLplUTa62lBZMI3Q/l2htvKOtRdfipBQDJ+y+0vWcOxyRfYSslPSR0m199Kxf3+DvMP0v6oVRaO7ZPc5IMU5BAaIVEIJzB2GvjZGcE0ApaTUgCSzLBMnGMfh1pApLQQ45EQC5AQmrTGP2ttGDkDpQkYTH6SBNbKodl/Bmje/UoqpUO5POdyz993nznswMJAZIAZMfJmU/1bd0FqY5jwFpR1dhfZzswtD7QYUjs/F/9oOnDw8I0feyYqQFtAVXAl0nHTvt6PXt7RwCtgARJ8L0G0gQAoEPjemoW0XNSQ/ReWqpUDiXlwKMOmwP5AUkBhvQQpysnTj/JRJzG6EvqGJ1M04I1FhPTujp5RYS7qPTftQMJoc2dCi8BCAeALl1pvvUE7jgCkY0pUjBTaOXtb/ypxdG3QmQYAEMLayYFGKpjEWV3CaDVHjaRJioqx7xSVYk5UTcqRCGGGVK0FysVBkzLRJyoHHt0fkGc8SfJHYgBc3YuPiBCKgkJIlBRUFWyK3irzSaZw/WfvVG1oiL+k1no4COPtnqbwr7HymkRgBl7RaPKkd7WFBE4PtPoG7vzPg/O6W9+Y0vl3KEZEESIh4Gy4JmNLVkYd+hC1x/1BwG00k1IAnkikZmSl8qVFqMv5wosq6xyVSShbzEZeMhtl4OMP+xyYMCUxGAqh7Y/03MN7PCTxIBJIlIkDzNgimRSaYaKryv7DzndUnsJ70EAB06GdwIwhHlVKcBoX9OVEwnAQoJ1ZHVg5dz3/yIm3RZsRKz8IW4BkjreEoE4AeQ8u4wkdM8E2FqSgBQqKof2Yec3zyVOT3E7KioH0gQkoYQYEEAcTCJpAn8Jre4QBVtLTEYLm80OpH6fe1InAAcmOuPZ1zACsHYY1AfCVEOLCATrN7+qwz6lNja1TWisUcXYjQmtsPW+fFN+Ftl506NGDo4EkCdAAj5dtbeRhOqxcw04IUk/pqvVqhxyorEJyADWDOKo1JC5AE8AIvJsPnMG4E5wggn5E1EDQiqXXvi76MKzf1M36UdtO5F4IG9IO7RiiUCUDqze3Mu7rU4AnSIKSXBt8oDXDhaidG1h0mF3OKwtwNDKjTd1BqCknpT4mrUPA2doIcFvP/NVMxa3ZK/RWLANi8E4tILtqNeJQNI+98b8nd7dX6sRECnsP/5QkNlnyACE6NxSEekhBeGqGkrhtKUzf/adCiE3axdkzDkAY3vDysVAuwkDBt8iihNAESgndTDpcP8NLf00uyjpGYCtwhETQDghwWe/+3/iI9da2MFI+8hJQKElY6VtizgBaSuwiOIEUATKSR3YBULU//GxaBYBWAsTKk4oR4RxWvFbz3ylrVUTVSfERKAYonECKqo4ARSFtAYWT8bZx8ILACICkEm3U9jsNpgggEACgi78+FlzuOIYuFYLZBziacDYVuzA3FY70uX3Wkesy4rKfjkrJhMutBOAGRe2/9jRSA2arYwV6kwIEgCi8lva+kMKaLn9ajvbuDP3hrcFiCPWnQISgaRj7ASQItHjVx6Y2QBPAKbb6RmA7UIQwiGhHF/+7l8q6Ucbqz/O5NhhphS+HlpZuT2v3ZjrrZNZlx2o3gbUJGWimpccN+Z3L20jQBBT7WrEBEX/b2eitl1xBxeQeuraa/XPAGx2uxAOCT3z7W9G8++/3x6uksZIahPaYaDgzcOPNNbqdmyzMWr2eYUAcItkT5SwXMJzR6cmzUKKrmSTlo1u4wNIgt9TonCSyIKMRf2SAoCqRFJhhWvxkQBPAF5UBODNd1qLAMz2k9/ZBmQ3APfp3Sh3rl1V0o9n5Jkln4sWXH/TNrLIcdrz+Mze9K1gXu0wEJFy7QLSqwZWCMDCc6V/kAsO9hmZUOCMfNzxlJoWWBZ2q+g6c57IhN2O7CEd2FjsfZU4xVRJEALbpIpe9SCg+0KUHKj51c9/2vTjlMXp/14dPHHwxMmAWhs35dY7p6M7OoEmbWvLDdRYW0iwCG+3COC9H/61bV+25PhT0zH0f451D61gACwiEUja7y0CEIvi2cXBjyQjsIdYE5fCxLZAGZKEJmG3uFESfx+H3ZIOTJF0RhTyh08DZZRoAUcLAmVskqQEkdY+gK+35U57pyakFgPgoUcftfDk0Lp89VUiAJfaE6GZE/rBFRjnod042ISHJE76sdTc778GdMjOdgACnI8Ej7EYd0JqNd1s6c8KAdi3BYg5uCZ+rVXurSIDQGfACVbg9JjUXlC5VkSBymCZfrJHY8v9lYi6ODafBB76Ibno4UMWSBOrHJ2H3bbU04K+RERd7QPFhJs7xQnAuyMqN+o644cBEIJq2zahPqUE0Oj+vXwfxyUkgE4eFK4JcQsQvIpKBJKOTTUBpO/u9ApJ6IdSRRDJNaZKpJl+ao7GtmsgCQ2AZfqRZGBht9ofJzcgkoNF1EmSMImCJB7y156QpIHE0SjsNql61194kC6/9OK2B8pOAH7q6V1vX20DiAC0fAXJeNZ+3uzvtbt3di0i0JJ+XLkk4mo/NZwdBiovwNAK9pTFAg4Dyfa7fQLIXt3od0iCzxoQBSsPkoRl+pHVc55MP1gYE3siBANLI000C7tFmjA15NBhc7QZs0w/scrR9qrWqD8tvn9XZ7lbAtDMAwUpIO0cevRDLd6luK8tyHreagTgtlapjwSssItQdEH6PPMtJf3ooDD3yGhNHEBoBUItKhFI2vfeEEB692avPOjJw1JPmoARN1oIu4XRLW9gkulnUmSwlTcQ24R+lOlnUqoI0gQpuYnl5zpIJq8yf/685aHPHqq5uakEICdOWO65vOrJ6z7sobcTAZitl/HikNAVha0WXc79pZJ+qO2drP7YtpA2mQuhFWxwd69fqzwTRbQvv9nfq9ZCEty7AVGwwrIKoXffuXq1yngZX6brkSQwYMr7i+SipCE3A6bUi6pdDlSO1ICpbEAVA6auTevfqZvXXn+tyvpv35VUc+SJU0Y4O127G5+lZwB2okeDh6Viw4OwwMI4v/m1PzEJshPyRgJgzEMLyAJCkoCYd2Uy14uANXwCaAWFJiQB61cMmGRaee984tKQ7HJwPbYJ2+WYiPMGylMsTlUuaYJ0YLbLoUw/pnKwHRqrHHY6kgyeZPi58tILVk92YmL4O/qRj7bSi0K/k40ArCd9tdKYjTWlfy+YAPCxuPDssy0l/ajbB80FogCRGEMr+DWsFpQIJO37YBBA2ptmrzzoCbvWm/Smcmhfm5xsFpChycKKkRYjCaQJPdRMoDhvoE5HsryBs+YAVGV30LV8h0SkxKtvrm9PEpLeu9BXYYCoaSnARHydFqSvW2dOR7ffPSuHoALCVzVob/zvL2ulVOIS2Yg6KYw/Z0vQ5s2NrbHt5F55XjM8OhKxJbtGToZkjuZ5/0b3GvrSzEQ4KDRqZYjvp+SQvqqNTMqUYNIm8x47GeYenL652696kCA7Ek+ya9NNIcLR/AAKmEUYigldbjlxSYOOIbXxkxqdG3yt2Lc1Jqg3lguwwJqdAAoA26SIjCRRQJXNq9AqU0tWzS+q840MAdb5NPe34lOL68lvbVRVcJtbbZmNR4GrP+0qlwrQ6kjk/L3dGNicu9D4dnkRSeMa8v+kH9ucPwp2x84VwB41yG/rCDgCxSHgBFAc1l6TIxAcAk4AwQ2JN8gRKA4BJ4DisPaaHIHgEHACCG5IvEGOQHEIOAEUh7XX5AgEh4ATQHBD4g1yBIpDwAmgOKy9JkcgOAScAIIbEm+QI1AcAk4AxWHtNTkCwSHgBBDckHiDHIHiEHACKA5rr8kRCA4BJ4DghsQb5AgUh4ATQHFYe02OQHAIOAEENyTeIEegOAScAIrD2mtyBIJDwAkguCHxBjkCxSHgBFAc1l6TIxAcAk4AwQ2JN8gRKA4BJ4DisPaaHIHgEHACCG5IvEGOQHEIOAEUh7XX5AgEh4ATQHBD4g1yBIpDwAmgOKy9JkcgOAScAIIbEm+QI1AcAk4AxWHtNTkCwSHgBBDckHiDHIHiEHACKA5rr8kRCA4BJ4DghsQb5AgUh4ATQHFYe02OQHAIOAEENyTeIEegOAScAIrD2mtyBIJDwAkguCHxBjkCxSHgBFAc1l6TIxAcAk4AwQ2JN8gRKA4BJ4DisPaaHIHgEHACCG5IvEGOQHEIOAEUh7XX5AgEh4ATQHBD4g1yBIpDwAmgOKy9JkcgOAScAIIbEm+QI1AcAk4AxWHtNTkCwSHgBBDckHiDHIHiEHACKA5rr8kRCA4BJ4DghsQb5AgUh4ATQHFYe02OQHAIOAEENyTeIEegOAScAIrD2mtyBIJDwAkguCHxBjkCxSHgBFAc1l6TIxAcAk4AwQ2JN8gRKA4BJ4DisPaaHIHgEHACCG5IvEGOQHEIOAEUh7XX5AgEh4ATQHBD4g1yBIpDwAmgOKy9JkcgOAScAIIbEm+QI1AcAk4AxWHtNTkCwSHgBBDckHiDHIHiEHACKA5rr8kRCA4BJ4DghsQb5AgUh4ATQHFYe02OQHAIOAEENyTeIEegOAScAIrD2mtyBIJD4P8DabtMb4mtvK0AAAAASUVORK5CYII='
     if platform.system() == 'Linux':
-        # PNG format.
         iconImg = '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'
 
+    icon_filepath = 'tmp.ico'
     tmpIcon = open(icon_filepath, 'wb+')
     tmpIcon.write(base64.b64decode(iconImg))
     tmpIcon.close()
@@ -3157,16 +3128,8 @@ def main():
     os.remove(icon_filepath)
 
     root.mainloop()
-    print("exit settings")
     GLOBAL_SERVER_SHUTDOWN=True
     clean_extension_status()
-
-def force_remove_file(filepath):
-    if os.path.exists(filepath):
-        try:
-            os.remove(filepath)
-        except Exception as exc:
-            pass
 
 def clean_tmp_file():
     remove_file_list = [CONST_MAXBOT_LAST_URL_FILE
@@ -3175,27 +3138,10 @@ def clean_tmp_file():
         ,CONST_MAXBOT_QUESTION_FILE
     ]
     for filepath in remove_file_list:
-        force_remove_file(filepath)
-
-def get_ip_address():
-    default_ip = "127.0.0.1"
-    ip = default_ip
-    try:
-        ip = [l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
-            if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)),
-            s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET,
-            socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
-    except Exception as exc:
-        print(exc)
-        try:
-            ip = socket.gethostname()
-        except Exception as exc2:
-            print(exc2)
-            ip = default_ip
-    return ip
+         util.force_remove_file(filepath)
 
 def btn_copy_ip_clicked():
-    local_ip = get_ip_address()
+    local_ip = util.get_ip_address()
     ip_address = "http://%s:%d/" % (local_ip,CONST_SERVER_PORT)
     pyperclip.copy(ip_address)
 
@@ -3299,11 +3245,11 @@ async def main_server():
         pass
 
     app = Application([
-        (r"/", MainHandler),
-        (r"/version", VersionHandler),
-        (r"/ocr", OcrHandler),
-        (r"/query", MainHandler),
-        (r"/question", QuestionHandler),
+        ("/", MainHandler),
+        ("/version", VersionHandler),
+        ("/ocr", OcrHandler),
+        ("/query", MainHandler),
+        ("/question", QuestionHandler),
     ])
     app.ocr = ocr;
     app.version = CONST_APP_VERSION;
@@ -3312,26 +3258,9 @@ async def main_server():
     print("server running on port:", CONST_SERVER_PORT)
     await asyncio.Event().wait()
 
-def is_connectable(port: int, host: Optional[str] = "localhost") -> bool:
-    """Tries to connect to the server at port to see if it is running.
-
-    :Args:
-     - port - The port to connect.
-    """
-    socket_ = None
-    _is_connectable_exceptions = (socket.error, ConnectionResetError)
-    try:
-        socket_ = socket.create_connection((host, port), 1)
-        result = True
-    except _is_connectable_exceptions:
-        result = False
-    finally:
-        if socket_:
-            socket_.close()
-    return result
 
 def web_server():
-    is_port_binded = is_connectable(CONST_SERVER_PORT)
+    is_port_binded = util.is_connectable(CONST_SERVER_PORT)
     #print("is_port_binded:", is_port_binded)
     if not is_port_binded:
         asyncio.run(main_server())
@@ -3350,18 +3279,19 @@ def preview_question_text_file():
             question_text = infile.readline()
 
             global txt_question
-            try:
-                displayed_question_text = txt_question.get("1.0",END).strip()
-                if displayed_question_text != question_text:
-                    # start to refresh
-                    txt_question.delete("1.0","end")
-                    if len(question_text) > 0:
-                        txt_question.insert("1.0", question_text)
-            except Exception as exc:
-                pass
+            if 'txt_question' in globals():
+                try:
+                    displayed_question_text = txt_question.get("1.0",END).strip()
+                    if displayed_question_text != question_text:
+                        # start to refresh
+                        txt_question.delete("1.0","end")
+                        if len(question_text) > 0:
+                            txt_question.insert("1.0", question_text)
+                except Exception as exc:
+                    pass
 
 if __name__ == "__main__":
-    threading.Thread(target=resetful_api_timer, daemon=True).start()
+    threading.Thread(target=settgins_gui_timer, daemon=True).start()
     threading.Thread(target=web_server, daemon=True).start()
     clean_tmp_file()
-    main()
+    main_gui()

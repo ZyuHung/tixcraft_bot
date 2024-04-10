@@ -6,11 +6,15 @@ MaxBot is a FREE and open source bot program. Good luck getting your expected ti
 # Download 
 (搶票程式下載)
 
+目前有打包的「執行檔」，只有Windows 平台，其他作業系統需要使用原始碼來執行。當然Windows 平台也可以用原始碼執行MaxBot.
+
 https://github.com/max32002/tixcraft_bot/releases
 
-如果你是要用原始碼執行MaxBot, 在透過git clone 或在github按下載原始碼的 zip檔，你的python 版本可以使用3.7 / 3.8 / 3.9 / 3.10 這4個版號。
+如果你是要用「原始碼」執行MaxBot, 在透過git clone 或在github按下載原始碼的 zip檔，你的python 版本可以使用3.7 / 3.8 / 3.9 / 3.10 這4個版號。
 
-如果有辦法的話，建議使用原始碼來執行MaxBot，執行上的效率與相容性的問題會較少，使用方法是先取得原始碼後，開啟 Terminal 視窗來下指令，應該是4行指令就可以了。
+如果有辦法的話，建議使用原始碼來執行MaxBot，執行上的「效率」與「相容性」的問題會較少。
+
+使用原始碼的解法，第一步是先取得原始碼後，開啟 Terminal 視窗來下指令，應該是4行指令就可以了。
 
 請參看看文章: 如何用虛擬主機搶拓元的門票，這篇文章是以虛擬主機來示範，在 Windows / macOS / Linux 平台裡的 python 操作方式幾乎相同。
 
@@ -75,6 +79,13 @@ https://github.com/max32002/tixcraft_bot/issues/82#issuecomment-1878986084
 
 透過瀏覽器下載 github 上的 zip 檔, 在 Windows / macOS / Linux 平台, 預設的路徑在「下載」(~/Download) 的資料夾, 你在執行的 Terminal 視窗的路徑, 與你解壓縮的路徑可能不同, 直接執行上面的指令, 會無法進入到預期的資料夾內。
 
+Q: 取得source code後跑出來fatal: destination path 'tixcraft_bot' already exists and is not an empty directory.想問是什麼意思?
+
+A: 執行 git clone 2次, 重覆取得 source code, 才會有這個問題, 如果 tixcraft_bot 目錄已經存在, 直接 cd tixcraft_bot 就可以了。
+如果你想把已下載的刪除, 可以直把把 tixcraft_bot 目錄刪掉即可。
+如果你想更新 source code, 可以重新下載, 或是先 cd tixcraft_bot 目錄後, 再執行 git pull , 可以更新 source code 為新的版本。
+
+
 PS:
 * 請先確定你的python 執行環境下已安裝 selenium 及相關的套件，請參考 pip-req.txt 檔案內容。
 * 透過 python3 執行 settings.py 就可以有 GUI 的設定介面。
@@ -89,6 +100,12 @@ Q: 是只有使用虛擬主機才要用程式碼執行搶票機器人嗎？
 
 A: 除了 Window 有打包的執行檔之外, macOS / Linux 只能使用原始碼來執行, 當然 Windows 也可以用原始碼來執行.
 
+# File Description
+(檔案說明)
+* chrome_tixcraft.py : 搶票機器人主程式, 用來自動化網頁的操作。
+* config_launcher.py : 設定檔管理, 方便對多個設定檔案搶票。
+* kktix_status.py : kktix 售票狀態監控，可以在有票時提發出提醒。
+* settings.py : 編輯 settings.json 的 GUI 介面。提供圖片OCR功能給chrome擴充功能。支援定時啟用/停用MaxBot。
 
 # Introduce the Implement 
 (實作方法)

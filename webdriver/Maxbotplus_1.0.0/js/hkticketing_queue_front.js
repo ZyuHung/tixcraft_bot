@@ -4,9 +4,9 @@ function begin()
     const status_div = document.querySelector('#status');
     let settings = JSON.parse(settings_div.innerHTML);
     let status = status_div.innerHTML;
-    console.log("msg");
-    console.log(settings);
-    console.log(status);
+    //console.log("msg");
+    //console.log(settings);
+    //console.log(status);
 
     let auto_reload_page_interval = 0.0;
     if(settings) {
@@ -14,13 +14,13 @@ function begin()
     }
 
     // too short to cause error.
-    if(auto_reload_page_interval < 0.8) {
-        auto_reload_page_interval = 0.8;
+    if(auto_reload_page_interval < 0.5) {
+        auto_reload_page_interval = 0.5;
     }
 
     if(status=='ON') {
         setInterval(() => {
-            busyFor = 0;
+            //var busyFor = 0;
             reload();
         }, auto_reload_page_interval * 1000);
     }

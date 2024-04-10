@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #encoding=utf-8
-
+# if you want to run on command mode to monitor kktix status, try:
+# python kktix_status.py --silent true
 try:
     # for Python2
     import tkMessageBox as messagebox
@@ -14,20 +15,26 @@ except ImportError:
     except Exception as e:
         pass
 
+import argparse
 import base64
 import json
 import os
 import platform
+import subprocess
 import sys
 import threading
+import time
 import webbrowser
+from datetime import datetime
 
 import util
 
 CONST_APP_VERSION = "MaxBot (2024.03.30)"
 
-CONST_MAXBOT_LAUNCHER_FILE = "config_launcher.json"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
+CONST_MAXBOT_KKTIX_CONFIG_FILE = "kktix.json"
+CONST_MAXBOT_KKTIX_LOG_FILE = "kktix.log"
+CONST_CAPTCHA_SOUND_FILENAME_DEFAULT = "ding-dong.wav"
 
 translate={}
 
@@ -42,25 +49,6 @@ URL_EDGE_DRIVER = 'https://developer.microsoft.com/zh-tw/microsoft-edge/tools/we
 def load_translate():
     translate = {}
     en_us={}
-    en_us["language"] = 'Language'
-    en_us["enable"] = 'Enable'
-
-    en_us["config_list"] = 'Config List'
-    en_us["advanced"] = 'Advanced'
-    en_us["about"] = 'About'
-
-    en_us["run"] = 'Run'
-    en_us["browse"] = 'Browse...'
-    en_us["save"] = 'Save'
-    en_us["exit"] = 'Close'
-    en_us["copy"] = 'Copy'
-    en_us["restore_defaults"] = 'Restore Defaults'
-    en_us["done"] = 'Done'
-
-    en_us["maxbot_slogan"] = 'MaxRegBot is a FREE and open source bot program. Wish you good luck.'
-    en_us["donate"] = 'Donate'
-    en_us["help"] = 'Help'
-    en_us["release"] = 'Release'
 
     zh_tw={}
     zh_tw["language"] = '語言'
@@ -71,8 +59,20 @@ def load_translate():
     zh_tw["autofill"] = '自動填表單'
     zh_tw["about"] = '關於'
 
-    zh_tw["run"] = '搶票'
-    zh_tw["browse"] = '開啟...'
+    zh_tw["url"] = '活動網址'
+    zh_tw["check_interval"] = '檢查間隔(秒)'
+    
+    zh_tw["status_in_stock"] = "當狀態為 IN_STOCK"
+    zh_tw["play_ticket_sound"] = '有票時播放音效'
+    zh_tw["play_sound_filename"] = '音效檔'
+    zh_tw["ticket_exec_maxbot"] = '有票時執行MaxBot'
+    zh_tw["maxbot_config"] = 'MaxBot 設定檔'
+    zh_tw["ticket_exec_command"] = '有票時執行指令'
+    
+    zh_tw["log"] = '事件記錄'
+    zh_tw["last_status"] = '上一個狀態'
+
+    zh_tw["browse"] = '瀏覽...'
     zh_tw["save"] = '存檔'
     zh_tw["exit"] = '關閉'
     zh_tw["copy"] = '複製'
@@ -85,49 +85,8 @@ def load_translate():
     zh_tw["help"] = '使用教學'
 
     zh_cn={}
-    zh_cn["language"] = '语言'
-    zh_cn["enable"] = '启用'
-
-    zh_cn["config_list"] = '设定档管理'
-    zh_cn["advanced"] = '進階設定'
-    zh_cn["autofill"] = '自动填表单'
-    zh_cn["about"] = '关于'
-    zh_cn["copy"] = '复制'
-
-    zh_cn["run"] = '抢票'
-    zh_cn["browse"] = '开启...'
-    zh_cn["save"] = '存档'
-    zh_cn["exit"] = '关闭'
-    zh_cn["copy"] = '复制'
-    zh_cn["restore_defaults"] = '恢复默认值'
-    zh_cn["done"] = '完成'
-
-    zh_cn["maxbot_slogan"] = 'MaxRegBot 是一个免费的开源机器人程序。\n祝您挂号成功。'
-    zh_cn["donate"] = '打赏'
-    zh_cn["help"] = '使用教学'
-    zh_cn["release"] = '所有可用版本'
 
     ja_jp={}
-    ja_jp["language"] = '言語'
-    ja_jp["enable"] = '有効'
-
-    ja_jp["config_list"] = 'Config List'
-    ja_jp["advanced"] = '高度な設定'
-    ja_jp["autofill"] = 'オートフィル'
-    ja_jp["about"] = '情報'
-
-    ja_jp["run"] = 'チケットを取る'
-    ja_jp["browse"] = '開ける...'
-    ja_jp["save"] = '保存'
-    ja_jp["exit"] = '閉じる'
-    ja_jp["copy"] = 'コピー'
-    ja_jp["restore_defaults"] = 'デフォルトに戻す'
-    ja_jp["done"] = '終わり'
-
-    ja_jp["maxbot_slogan"] = 'MaxRegBot は無料のオープン ソース ボット プログラムです。チケットの成功をお祈りします。'
-    ja_jp["donate"] = '寄付'
-    ja_jp["help"] = '利用方法'
-    ja_jp["release"] = 'リリース'
 
     translate['en_us']=en_us
     translate['zh_tw']=zh_tw
@@ -135,19 +94,10 @@ def load_translate():
     translate['ja_jp']=ja_jp
     return translate
 
-def get_default_config():
-    config_dict={}
-
-    config_dict["list"] = [CONST_MAXBOT_CONFIG_FILE]
-
-    config_dict["advanced"] = {}
-    config_dict["advanced"]["language"] = "English"
-
-    return config_dict
 
 def load_json():
     app_root = util.get_app_root()
-    config_filepath = os.path.join(app_root, CONST_MAXBOT_LAUNCHER_FILE)
+    config_filepath = os.path.join(app_root, CONST_MAXBOT_KKTIX_CONFIG_FILE)
 
     config_dict = None
     if os.path.isfile(config_filepath):
@@ -159,7 +109,7 @@ def load_json():
 
 def btn_restore_defaults_clicked(language_code):
     app_root = util.get_app_root()
-    config_filepath = os.path.join(app_root, CONST_MAXBOT_LAUNCHER_FILE)
+    config_filepath = os.path.join(app_root, CONST_MAXBOT_KKTIX_CONFIG_FILE)
     if os.path.exists(str(config_filepath)):
         try:
             os.unlink(str(config_filepath))
@@ -173,42 +123,78 @@ def btn_restore_defaults_clicked(language_code):
     global root
     load_GUI(root, config_dict)
 
+def btn_preview_sound_clicked():
+    global txt_play_sound_filename
+    new_sound_filename = txt_play_sound_filename.get().strip()
+    #print("new_sound_filename:", new_sound_filename)
+    app_root = util.get_app_root()
+    new_sound_filename = os.path.join(app_root, new_sound_filename)
+    util.play_mp3_async(new_sound_filename)
+
 def btn_save_clicked():
     btn_save_act()
 
-def btn_save_act(slience_mode=True):
+def get_config_dict_from_ui():
     app_root = util.get_app_root()
-    config_filepath = os.path.join(app_root, CONST_MAXBOT_LAUNCHER_FILE)
+    config_filepath = os.path.join(app_root, CONST_MAXBOT_KKTIX_CONFIG_FILE)
 
     config_dict = get_default_config()
     language_code = get_language_code_by_name(config_dict["advanced"]["language"])
 
     is_all_data_correct = True
-
-    global combo_language
+    
+    #global combo_language
     if is_all_data_correct:
-        config_dict["advanced"]["language"] = combo_language.get().strip()
+        #config_dict["advanced"]["language"] = combo_language.get().strip()
         # display as new language.
         language_code = get_language_code_by_name(config_dict["advanced"]["language"])
 
-
     global txt_file_name
     filelist = []
-    for i in range(15):
+    for i in range(1):
         filelist.append(txt_file_name[i].get().strip())
 
     if is_all_data_correct:
         config_dict["list"]=filelist
 
-    # save config.
-    if is_all_data_correct:
-        # slience
-        util.save_json(config_dict, config_filepath)
-        
-        if not slience_mode:
-            messagebox.showinfo(translate[language_code]["save"], translate[language_code]["done"])
+    global txt_url
+    global combo_check_interval
 
-    return is_all_data_correct
+    global chk_state_play_ticket_sound
+    global txt_play_sound_filename
+
+    global chk_state_ticket_exec_maxbot
+    
+    global chk_state_ticket_exec_command
+    global txt_new_process
+
+    if is_all_data_correct:
+        try:
+            config_dict["url"] = txt_url.get().strip()
+            config_dict["check_interval"] = int(combo_check_interval.get().strip())
+
+            config_dict["advanced"]["play_sound"]["ticket"] = bool(chk_state_play_ticket_sound.get())
+            config_dict["advanced"]["play_sound"]["filename"] = txt_play_sound_filename.get().strip()
+            
+            config_dict["ticket_exec_maxbot"] = bool(chk_state_ticket_exec_maxbot.get())
+            
+            config_dict["ticket_exec_command"] = bool(chk_state_ticket_exec_command.get())
+            config_dict["new_process"] = txt_new_process.get().strip()
+        except Exception as e:
+            raise e
+
+    return is_all_data_correct, config_dict
+
+def btn_save_act(slience_mode=True):
+    is_all_data_correct, config_dict = get_config_dict_from_ui()
+
+    # slience
+    app_root = util.get_app_root()
+    config_filepath = os.path.join(app_root, CONST_MAXBOT_KKTIX_CONFIG_FILE)
+    util.save_json(config_dict, config_filepath)
+    
+    if not slience_mode:
+        messagebox.showinfo(translate[language_code]["save"], translate[language_code]["done"])
 
 def open_url(url):
     webbrowser.open_new(url)
@@ -265,18 +251,9 @@ def applyNewLanguage():
     lbl_release.config(text=translate[language_code]["release"])
 
     global btn_browse
-    for i in range(15):
+    for i in range(1):
         btn_browse[i].config(text=translate[language_code]['browse'] + " " + str(i+1))
 
-    global btn_run
-    for i in range(15):
-        btn_run[i].config(text=translate[language_code]['run'] + " " + str(i+1))
-
-    global btn_save
-    global btn_restore_defaults
-
-    btn_save.config(text=translate[language_code]["save"])
-    btn_restore_defaults.config(text=translate[language_code]["restore_defaults"])
 
 # PS: nothing need to do, at current process.
 def callbackHomepageOnChange(event):
@@ -287,7 +264,8 @@ def showHideBlocks(all_layout_visible=False):
 
 def btn_items_browse_event(event):
     working_dir = os.path.dirname(os.path.realpath(__file__))
-    btn_index = int(str(event.widget['text']).split(" ")[1])
+    #btn_index = int(str(event.widget['text']).split(" ")[1])
+    btn_index = 1
     global txt_file_name_value
     file_path = filedialog.askopenfilename(initialdir=working_dir, defaultextension=".json",filetypes=[("json Documents","*.json"),("All Files","*.*")])
     if not file_path is None:
@@ -299,15 +277,28 @@ def btn_items_browse_event(event):
         txt_file_name_value[btn_index-1].set(display_path)
         #print("new json file path:", txt_file_name[btn_index-1].get().strip())
 
+def btn_new_process_browse_event(event):
+    working_dir = os.path.dirname(os.path.realpath(__file__))
+    global txt_new_process_value
+    file_path = filedialog.askopenfilename(initialdir=working_dir, filetypes=[("All Files","*.*")])
+    if not file_path is None:
+        display_path = file_path
+        if len(file_path) > len(working_dir):
+            if file_path[:len(working_dir)]==working_dir:
+                display_path = file_path[len(working_dir)+1:]
+        print(display_path)
+        txt_new_process_value.set(display_path)
+
 def btn_items_run_event(event):
-    btn_index = int(str(event.widget['text']).split(" ")[1])
+    #btn_index = int(str(event.widget['text']).split(" ")[1])
+    btn_index = 1
     global txt_file_name
     filename=txt_file_name[btn_index-1].get().strip()
     script_name = "chrome_tixcraft"
     threading.Thread(target=util.launch_maxbot, args=(script_name,filename,)).start()
 
-def ConfigListTab(root, config_dict, language_code, UI_PADDING_X):
 
+def ConfigListTab(root, config_dict, language_code, UI_PADDING_X):
     # output to GUI.
     row_count = 0
 
@@ -325,29 +316,179 @@ def ConfigListTab(root, config_dict, language_code, UI_PADDING_X):
     btn_browse = {}
     btn_run = {}
 
-    print("config_dict[list]:",config_dict["list"])
-    print("config_dict[list]:",len(config_dict["list"]))
-    for i in range(15):
+    #print("config_dict[list]:",config_dict["list"])
+    #print("config_dict[list]:",len(config_dict["list"]))
+
+    # assign default value.
+    play_sound_filename = config_dict["advanced"]["play_sound"]["filename"].strip()
+    if play_sound_filename is None:
+        play_sound_filename = ""
+    if len(play_sound_filename)==0:
+        play_sound_filename = play_sound_filename_default
+
+    global lbl_url
+    lbl_url = Label(frame_group_header, text=translate[language_code]['url'])
+    lbl_url.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_url
+    txt_url_value = StringVar(frame_group_header, value=config_dict["url"])
+    txt_url = Entry(frame_group_header, width=30, textvariable = txt_url_value)
+    txt_url.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_check_interval
+    lbl_check_interval = Label(frame_group_header, text=translate[language_code]['check_interval'])
+    lbl_check_interval.grid(column=0, row=group_row_count, sticky = E)
+
+    global combo_check_interval
+    combo_check_interval = ttk.Combobox(frame_group_header, width=30)
+    combo_check_interval['values']= ("1","3","8","15","30","60","180","300","600","3600")
+    combo_check_interval.set(str(config_dict["check_interval"]))
+    combo_check_interval.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_status_IN_STOCK_hr
+    lbl_status_IN_STOCK_hr = Label(frame_group_header, text="")
+    lbl_status_IN_STOCK_hr.grid(column=0, row=group_row_count, sticky = E)
+
+    group_row_count +=1
+
+    global lbl_status_IN_STOCK
+    lbl_status_IN_STOCK = Label(frame_group_header, text=translate[language_code]['status_in_stock'])
+    lbl_status_IN_STOCK.grid(column=0, row=group_row_count, sticky = E)
+
+    group_row_count +=1
+
+    global lbl_play_ticket_sound
+    lbl_play_ticket_sound = Label(frame_group_header, text=translate[language_code]['play_ticket_sound'])
+    lbl_play_ticket_sound.grid(column=0, row=group_row_count, sticky = E)
+
+    global chk_state_play_ticket_sound
+    chk_state_play_ticket_sound = BooleanVar()
+    chk_state_play_ticket_sound.set(config_dict["advanced"]["play_sound"]["ticket"])
+
+    global chk_play_ticket_sound
+    chk_play_ticket_sound = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_play_ticket_sound)
+    chk_play_ticket_sound.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_play_sound_filename
+    lbl_play_sound_filename = Label(frame_group_header, text=translate[language_code]['play_sound_filename'])
+    lbl_play_sound_filename.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_play_sound_filename
+    txt_play_sound_filename_value = StringVar(frame_group_header, value=play_sound_filename)
+    txt_play_sound_filename = Entry(frame_group_header, width=30, textvariable = txt_play_sound_filename_value)
+    txt_play_sound_filename.grid(column=1, row=group_row_count, sticky = W)
+
+    icon_play_filename = "icon_play_1.gif"
+    icon_play_img = PhotoImage(file=icon_play_filename)
+
+    lbl_icon_play = Label(frame_group_header, image=icon_play_img, cursor="hand2")
+    lbl_icon_play.image = icon_play_img
+    lbl_icon_play.grid(column=2, row=group_row_count, sticky = W)
+    lbl_icon_play.bind("<Button-1>", lambda e: btn_preview_sound_clicked())
+
+    group_row_count +=1
+
+    global lbl_ticket_exec_maxbot
+    lbl_ticket_exec_maxbot = Label(frame_group_header, text=translate[language_code]['ticket_exec_maxbot'])
+    lbl_ticket_exec_maxbot.grid(column=0, row=group_row_count, sticky = E)
+
+    global chk_state_ticket_exec_maxbot
+    chk_state_ticket_exec_maxbot = BooleanVar()
+    chk_state_ticket_exec_maxbot.set(config_dict["ticket_exec_maxbot"])
+
+    global chk_ticket_exec_maxbot
+    chk_ticket_exec_maxbot = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_ticket_exec_maxbot)
+    chk_ticket_exec_maxbot.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+    
+    for i in range(1):
         filename = ""
         if i <= len(config_dict["list"])-1:
             filename = config_dict["list"][i]
-        lbl_file_name[i] = Label(frame_group_header, text=str(i+1))
+        lbl_file_name[i] = Label(frame_group_header, text=translate[language_code]['maxbot_config'])
         lbl_file_name[i].grid(column=0, row=group_row_count, sticky = E)
 
         txt_file_name_value[i] = StringVar(frame_group_header, value=filename)
         txt_file_name[i] = Entry(frame_group_header, width=20, textvariable = txt_file_name_value[i])
         txt_file_name[i].grid(column=1, row=group_row_count, sticky = W)
 
-        btn_browse[i] = ttk.Button(frame_group_header, text=translate[language_code]['browse'] + " " + str(i+1))
+        #btn_browse[i] = ttk.Button(frame_group_header, text=translate[language_code]['browse'] + " " + str(i+1))
+        btn_browse[i] = ttk.Button(frame_group_header, text=translate[language_code]['browse'])
         btn_browse[i].grid(column=2, row=group_row_count, sticky = W)
         btn_browse[i].bind('<Button-1>', btn_items_browse_event)
 
-        btn_run[i] = ttk.Button(frame_group_header, text=translate[language_code]['run'] + " " + str(i+1))
-        btn_run[i].grid(column=3, row=group_row_count, sticky = W)
-        btn_run[i].bind('<Button-1>', btn_items_run_event)
-
         group_row_count+=1
 
+    group_row_count +=1
+
+    global lbl_ticket_exec_command
+    lbl_ticket_exec_command = Label(frame_group_header, text=translate[language_code]['ticket_exec_command'])
+    lbl_ticket_exec_command.grid(column=0, row=group_row_count, sticky = E)
+
+    global chk_state_ticket_exec_command
+    chk_state_ticket_exec_command = BooleanVar()
+    chk_state_ticket_exec_command.set(config_dict["ticket_exec_command"])
+
+    global chk_ticket_exec_command
+    chk_ticket_exec_command = Checkbutton(frame_group_header, text=translate[language_code]['enable'], variable=chk_state_ticket_exec_command)
+    chk_ticket_exec_command.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global lbl_new_processes
+    lbl_new_processes = Label(frame_group_header, text=translate[language_code]['ticket_exec_command'])
+    lbl_new_processes.grid(column=0, row=group_row_count, sticky = E)
+
+    global txt_new_process
+    global txt_new_process_value
+    txt_new_process_value = StringVar(frame_group_header, value=config_dict["new_process"])
+    txt_new_process = Entry(frame_group_header, width=30, textvariable = txt_new_process_value)
+    txt_new_process.grid(column=1, row=group_row_count, sticky = W)
+
+    global btn_new_process_browse
+    btn_new_process_browse = ttk.Button(frame_group_header, text=translate[language_code]['browse'])
+    btn_new_process_browse.grid(column=2, row=group_row_count, sticky = W)
+    btn_new_process_browse.bind('<Button-1>', btn_new_process_browse_event)
+
+    group_row_count +=1
+
+    global lbl_status_log_hr
+    lbl_status_log_hr = Label(frame_group_header, text="")
+    lbl_status_log_hr.grid(column=0, row=group_row_count, sticky = E)
+
+    group_row_count +=1
+
+    global lbl_status_log
+    lbl_status_log = Label(frame_group_header, text=translate[language_code]['log'])
+    lbl_status_log.grid(column=0, row=group_row_count, sticky = E)
+
+    group_row_count +=1
+
+    global lbl_last_status
+    lbl_last_status = Label(frame_group_header, text=translate[language_code]['last_status'])
+    lbl_last_status.grid(column=0, row=group_row_count, sticky = E)
+
+    global status_variable 
+    status_variable = StringVar()
+    status_variable.set("")
+
+    global lbl_last_status_value
+    lbl_last_status_value = Label(frame_group_header, textvariable=status_variable)
+    lbl_last_status_value.grid(column=1, row=group_row_count, sticky = W)
+
+    group_row_count +=1
+
+    global txt_status_log
+    txt_status_log = Text(frame_group_header, width=40, height=12)
+    txt_status_log.grid(column=1, row=group_row_count, sticky = W, columnspan=2)
+    txt_status_log.insert("1.0", "")
 
     # add first block to UI.
     frame_group_header.grid(column=0, row=row_count, sticky = W, padx=UI_PADDING_X)
@@ -412,7 +553,6 @@ def AboutTab(root, language_code):
     lbl_fb_fans_url.grid(column=1, row=group_row_count, sticky = W)
     lbl_fb_fans_url.bind("<Button-1>", lambda e: open_url(URL_FB))
 
-
     group_row_count +=1
 
     lbl_chrome_driver = Label(frame_group_header, text=u'Chrome Driver')
@@ -469,11 +609,11 @@ def AdvancedTab(root, config_dict, language_code, UI_PADDING_X):
 def get_action_bar(root, language_code):
     frame_action = Frame(root)
 
-    global btn_save
+    #global btn_save
     global btn_restore_defaults
 
-    btn_save = ttk.Button(frame_action, text=translate[language_code]['save'], command= lambda: btn_save_clicked() )
-    btn_save.grid(column=1, row=0)
+    #btn_save = ttk.Button(frame_action, text=translate[language_code]['save'], command= lambda: btn_save_clicked() )
+    #btn_save.grid(column=1, row=0)
 
     btn_restore_defaults = ttk.Button(frame_action, text=translate[language_code]['restore_defaults'], command= lambda: btn_restore_defaults_clicked(language_code))
     btn_restore_defaults.grid(column=2, row=0)
@@ -488,8 +628,8 @@ def clearFrame(frame):
 def load_GUI(root, config_dict):
     clearFrame(root)
 
-    #language_code="en_us"
-    language_code = get_language_code_by_name(config_dict["advanced"]["language"])
+    language_code="zh_tw"
+    #language_code = get_language_code_by_name(config_dict["advanced"]["language"])
 
     row_count = 0
 
@@ -498,23 +638,43 @@ def load_GUI(root, config_dict):
     tab1 = Frame(tabControl)
     tabControl.add(tab1, text=translate[language_code]['config_list'])
 
-    tab2 = Frame(tabControl)
-    tabControl.add(tab2, text=translate[language_code]['advanced'])
+    #tab2 = Frame(tabControl)
+    #tabControl.add(tab2, text=translate[language_code]['advanced'])
 
     tab3 = Frame(tabControl)
     tabControl.add(tab3, text=translate[language_code]['about'])
     tabControl.grid(column=0, row=row_count)
+    
     tabControl.select(tab1)
 
     row_count+=1
-
     frame_action = get_action_bar(root, language_code)
     frame_action.grid(column=0, row=row_count)
 
     global UI_PADDING_X
     ConfigListTab(tab1, config_dict, language_code, UI_PADDING_X)
-    AdvancedTab(tab2, config_dict, language_code, UI_PADDING_X)
+    #AdvancedTab(tab2, config_dict, language_code, UI_PADDING_X)
     AboutTab(tab3, language_code)
+
+def get_default_config():
+    config_dict={}
+
+    config_dict["list"] = [CONST_MAXBOT_CONFIG_FILE]
+    config_dict["check_interval"]=1
+    config_dict["url"]=""
+
+    config_dict["advanced"] = {}
+    config_dict["advanced"]["language"] = "繁體中文"
+
+    config_dict["advanced"]["play_sound"] = {}
+    config_dict["advanced"]["play_sound"]["ticket"] = True
+    config_dict["advanced"]["play_sound"]["filename"] = CONST_CAPTCHA_SOUND_FILENAME_DEFAULT
+
+    config_dict["ticket_exec_maxbot"] = True
+    config_dict["ticket_exec_command"] = True
+    config_dict["new_process"] = ""
+
+    return config_dict
 
 def main_gui():
     global translate
@@ -536,7 +696,7 @@ def main_gui():
     load_GUI(root, config_dict)
 
     GUI_SIZE_WIDTH = 580
-    GUI_SIZE_HEIGHT = 580
+    GUI_SIZE_HEIGHT = 600
 
     GUI_SIZE_MACOS = str(GUI_SIZE_WIDTH) + 'x' + str(GUI_SIZE_HEIGHT)
     GUI_SIZE_WINDOWS=str(GUI_SIZE_WIDTH-60) + 'x' + str(GUI_SIZE_HEIGHT-55)
@@ -574,5 +734,181 @@ def main_gui():
 
     root.mainloop()
 
+def kktix_in_stock_play_sound():
+    global chk_state_play_ticket_sound
+    if 'chk_state_play_ticket_sound' in globals():
+        try:
+            if bool(chk_state_play_ticket_sound.get()):
+                btn_preview_sound_clicked()
+        except Exception as e:
+            pass
+
+def update_kktix_status(registerStatus):
+    global status_variable 
+    if 'status_variable' in globals():
+        try:
+            status_variable.set(registerStatus)
+        except Exception as e:
+            pass
+
+def append_kktix_status_log(output_log):
+    global txt_status_log
+    if 'txt_status_log' in globals():
+        try:
+            txt_status_log.insert("1.0", output_log + "\n")
+        except Exception as e:
+            pass
+
+def append_kktix_status_log_file(output_log):
+    app_root = util.get_app_root()
+    log_filepath = os.path.join(app_root, CONST_MAXBOT_KKTIX_LOG_FILE)
+    file1 = open(log_filepath, "a")  # append mode
+    file1.write(output_log)
+    file1.close()
+
+def kktix_status_query(config_dict, last_status, log_file=False):
+    url = config_dict["url"]
+    datetime_string = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    registerStatus = ""
+    if len(url) > 0:
+        registerStatus = util.get_kktix_status_by_url(url)
+        update_kktix_status(registerStatus)
+
+    if len(registerStatus) > 0:
+        output_log = datetime_string + ", " + registerStatus
+        print(output_log)
+        if log_file:
+            append_kktix_status_log_file(output_log + "\n")
+
+        if registerStatus=="IN_STOCK":
+            # each time to play sound.
+            kktix_in_stock_play_sound()
+
+        if registerStatus != last_status:
+            # run once.
+            append_kktix_status_log(output_log)
+
+            if registerStatus=="IN_STOCK":
+                btn_index = 1
+                try:
+                    print(config_dict["ticket_exec_maxbot"])
+                    if config_dict["ticket_exec_maxbot"]:
+                        filename=config_dict["list"][btn_index-1]
+                        #print("filename", filename)
+                        script_name = "chrome_tixcraft"
+                        if config_dict["advanced"]["webdriver_type"]=="nodriver":
+                            script_name = "nodriver_tixcraft"
+                        if len(filename) > 0:
+                            threading.Thread(target=util.launch_maxbot, args=(script_name, filename,)).start()
+
+                    print(config_dict["ticket_exec_command"], config_dict["new_process"])
+                    if config_dict["ticket_exec_command"]:
+                        if len(config_dict["new_process"]) > 0:
+                            working_dir = os.path.dirname(os.path.realpath(__file__))
+                            subprocess.Popen(config_dict["new_process"] , shell=True, cwd=working_dir)
+                except Exception as e:
+                    print(e)
+                    pass
+
+    return registerStatus
+
+def collect_ui_config():
+    global combo_check_interval
+    global txt_url
+    
+    global chk_state_ticket_exec_maxbot
+    global txt_file_name
+    
+    global chk_state_ticket_exec_command
+    global txt_new_process
+
+    is_ui_ready = True
+    check_interval = 3
+    config_filepath, config_dict = load_json()
+
+    if 'combo_check_interval' in globals():
+        try:
+            check_interval = int(combo_check_interval.get().strip())
+            config_dict["check_interval"] = check_interval
+        except Exception as e:
+            pass
+    else:
+        is_ui_ready = False
+
+    url = ""
+    filename = ""
+    #print("is_ui_ready:", is_ui_ready)
+    if is_ui_ready:
+        try:
+            if 'txt_url' in globals():
+                url = txt_url.get().strip()
+                config_dict["url"] = url
+
+            if 'chk_state_ticket_exec_maxbot' in globals():
+                config_dict["ticket_exec_maxbot"] = bool(chk_state_ticket_exec_maxbot.get())
+            
+            # current only 1 config file.
+            btn_index = 1
+            if 'txt_file_name' in globals():
+                filename=txt_file_name[btn_index-1].get().strip()
+                config_dict["list"] = [filename]
+
+            if 'chk_state_ticket_exec_command' in globals():
+                config_dict["ticket_exec_command"] = bool(chk_state_ticket_exec_command.get())
+            
+            if 'txt_new_process' in globals():
+                config_dict["new_process"] = txt_new_process.get().strip()
+        except Exception as e:
+            pass
+
+    return is_ui_ready, config_dict
+
+def resetful_api_timer(log_file=False):
+    checkpoint_time = time.time()
+    last_status = ""
+
+    config_filepath, config_dict = load_json()
+    json_str_old = json.dumps(config_dict)
+
+    while True:
+        elapsed_time = time.time() - checkpoint_time
+        is_ui_ready, config_dict = collect_ui_config()
+        #print(is_ui_ready, config_dict)
+
+        if elapsed_time > config_dict["check_interval"]:
+            # main program.
+            last_status = kktix_status_query(config_dict, last_status, log_file=log_file)
+            checkpoint_time = time.time()
+
+        if is_ui_ready:
+            json_str_new = json.dumps(config_dict)
+            if json_str_new != json_str_old:
+                util.save_json(config_dict, config_filepath)
+                json_str_old = json_str_new
+
+        time.sleep(0.5)
+
+def main(args):
+    silent_flag = False
+    if not args.silent is None:
+        silent_flag = util.t_or_f(args.silent)
+    #print("silent_flag:",silent_flag)
+
+    if not silent_flag:
+        threading.Thread(target=resetful_api_timer, daemon=True).start()
+        main_gui()
+    else:
+        resetful_api_timer(log_file=True)
+
+
 if __name__ == "__main__":
-    main_gui()
+    parser = argparse.ArgumentParser(
+            description="MaxBot Aggument Parser")
+
+    parser.add_argument("--silent",
+        help="command line mode",
+        default='False',
+        type=str)
+
+    args = parser.parse_args()
+    main(args)
