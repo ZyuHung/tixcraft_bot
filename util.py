@@ -25,19 +25,25 @@ def get_ip_address():
     try:
         gethostname = socket.gethostname()
     except Exception as exc:
-        print(exc)
+        print("gethostname", exc)
         gethostname = None
 
     default_ip = "127.0.0.1"
     ip = default_ip
-    if not gethostname is None:
+
+    check_public_ip = True    
+    if "macos" in platform.platform().lower():
+        if "arm64" in platform.platform().lower():
+            check_public_ip = False
+
+    if check_public_ip and not gethostname is None:
         try:
             ip = [l for l in ([ip for ip in socket.gethostbyname_ex(gethostname)[2]
                 if not ip.startswith("127.")][:1], [[(s.connect(('8.8.8.8', 53)),
                 s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET,
                 socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
         except Exception as exc:
-            print(exc)
+            print("gethostbyname_ex", exc)
             ip = gethostname
     
     #print("get_ip_address:", ip)
@@ -135,6 +141,12 @@ def format_config_keyword_for_json(user_input):
 def is_text_match_keyword(keyword_string, text):
     is_match_keyword = True
     if len(keyword_string) > 0 and len(text) > 0:
+
+        # directly input text into arrray field.
+        if len(keyword_string) > 0:
+            if not '"' in keyword_string:
+                keyword_string = '"' + keyword_string + '"'
+        
         is_match_keyword = False
         keyword_array = []
         try:
@@ -162,8 +174,11 @@ def is_text_match_keyword(keyword_string, text):
 
 def save_json(config_dict, target_path):
     json_str = json.dumps(config_dict, indent=4)
-    with open(target_path, 'w') as outfile:
-        outfile.write(json_str)
+    try:
+        with open(target_path, 'w') as outfile:
+            outfile.write(json_str)
+    except Exception as e:
+        pass
 
 def write_string_to_file(filename, data):
     outfile = None
@@ -448,8 +463,12 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
             os.unlink(target_path)
         except Exception as exc:
             pass
-    with open(target_path, 'w') as outfile:
-        json.dump(config_dict, outfile)
+
+    try:
+        with open(target_path, 'w') as outfile:
+            json.dump(config_dict, outfile)
+    except Exception as e:
+        pass
 
     # add host_permissions
     target_path = ext
@@ -457,8 +476,11 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
 
     manifest_dict = None
     if os.path.isfile(target_path):
-        with open(target_path) as json_data:
-            manifest_dict = json.load(json_data)
+        try:
+            with open(target_path) as json_data:
+                manifest_dict = json.load(json_data)
+        except Exception as e:
+            pass
 
     local_remote_url_array = []
     local_remote_url = config_dict["advanced"]["remote_url"]
@@ -473,16 +495,20 @@ def dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG
 
     if len(local_remote_url_array) > 0:
         is_manifest_changed = False
-        for remote_url_final in local_remote_url_array:
-            if not remote_url_final in manifest_dict["host_permissions"]:
-                #print("local remote_url not in manifest:", remote_url_final)
-                manifest_dict["host_permissions"].append(remote_url_final)
-                is_manifest_changed = True
+        if 'host_permissions' in manifest_dict:
+            for remote_url_final in local_remote_url_array:
+                if not remote_url_final in manifest_dict["host_permissions"]:
+                    #print("local remote_url not in manifest:", remote_url_final)
+                    manifest_dict["host_permissions"].append(remote_url_final)
+                    is_manifest_changed = True
 
         if is_manifest_changed:
             json_str = json.dumps(manifest_dict, indent=4)
-            with open(target_path, 'w') as outfile:
-                outfile.write(json_str)
+            try:
+                with open(target_path, 'w') as outfile:
+                    outfile.write(json_str)
+            except Exception as e:
+                pass
 
 
 def dump_settings_to_maxblock_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG_FILE, CONST_MAXBLOCK_EXTENSION_FILTER):
@@ -500,9 +526,13 @@ def dump_settings_to_maxblock_plus_extension(ext, config_dict, CONST_MAXBOT_CONF
             os.unlink(target_path)
         except Exception as exc:
             pass
-    with open(target_path, 'w') as outfile:
-        config_dict["domain_filter"]=CONST_MAXBLOCK_EXTENSION_FILTER
-        json.dump(config_dict, outfile)
+
+    try:
+        with open(target_path, 'w') as outfile:
+            config_dict["domain_filter"]=CONST_MAXBLOCK_EXTENSION_FILTER
+            json.dump(config_dict, outfile)
+    except Exception as e:
+        pass
 
 # convert web string to reg pattern
 def convert_string_to_pattern(my_str, dynamic_length=True):
@@ -1374,8 +1404,12 @@ def get_answer_list_from_user_guess_string(config_dict, CONST_MAXBOT_ANSWER_ONLI
     # load from internet.
     user_guess_string = ""
     if os.path.exists(CONST_MAXBOT_ANSWER_ONLINE_FILE):
-        with open(CONST_MAXBOT_ANSWER_ONLINE_FILE, "r") as text_file:
-            user_guess_string = text_file.readline()
+        try:
+            with open(CONST_MAXBOT_ANSWER_ONLINE_FILE, "r") as text_file:
+                user_guess_string = text_file.readline()
+        except Exception as e:
+            pass
+
     if len(user_guess_string) > 0:
         user_guess_string = format_config_keyword_for_json(user_guess_string)
         try:

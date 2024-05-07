@@ -45,7 +45,7 @@ except Exception as exc:
     print(exc)
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.03.30)"
+CONST_APP_VERSION = "MaxBot (2024.04.15)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -55,38 +55,39 @@ CONST_MAXBOT_LAST_URL_FILE = "MAXBOT_LAST_URL.txt"
 CONST_MAXBOT_QUESTION_FILE = "MAXBOT_QUESTION.txt"
 CONST_MAXBLOCK_EXTENSION_NAME = "Maxblockplus_1.0.0"
 CONST_MAXBLOCK_EXTENSION_FILTER =[
-"*google-analytics.com/*",
-"*googletagmanager.com/*",
-"*googletagservices.com/*",
-"*lndata.com/*",
+"*.doubleclick.net/*",
+"*.googlesyndication.com/*",
+"*.ssp.hinet.net/*",
 "*a.amnet.tw/*",
 "*adx.c.appier.net/*",
+"*cdn.cookielaw.org/*",
+"*cdnjs.cloudflare.com/ajax/libs/clipboard.js/*",
 "*clarity.ms/*",
 "*cloudfront.com/*",
 "*cms.analytics.yahoo.com/*",
-"*doubleclick.net/*",
 "*e2elog.fetnet.net/*",
 "*fundingchoicesmessages.google.com/*",
 "*ghtinc.com/*",
+"*google-analytics.com/*",
+"*googletagmanager.com/*",
+"*googletagservices.com/*",
+"*img.uniicreative.com/*",
+"*lndata.com/*",
 "*match.adsrvr.org/*",
 "*onead.onevision.com.tw/*",
+"*play.google.com/log?*",
 "*popin.cc/*",
 "*rollbar.com/*",
 "*sb.scorecardresearch.com/*",
 "*tagtoo.co/*",
-"*.ssp.hinet.net/*",
 "*ticketmaster.sg/js/adblock*",
-"*.googlesyndication.com/*",
-"*treasuredata.com/*",
-"*play.google.com/log?*",
-"*www.youtube.com/youtubei/v1/player/heartbeat*",
-"*tixcraft.com/js/analytics.js*",
 "*ticketmaster.sg/js/adblock.js*",
-"*img.uniicreative.com/*",
-"*cdn.cookielaw.org/*",
-"*tixcraft.com/js/custom.js*",
+"*tixcraft.com/js/analytics.js*",
 "*tixcraft.com/js/common.js*",
-"*cdnjs.cloudflare.com/ajax/libs/clipboard.js/*"]
+"*tixcraft.com/js/custom.js*",
+"*treasuredata.com/*",
+"*www.youtube.com/youtubei/v1/player/heartbeat*",
+]
 
 CONST_CHROME_VERSION_NOT_MATCH_EN="Please download the WebDriver version to match your browser version."
 CONST_CHROME_VERSION_NOT_MATCH_TW="請下載與您瀏覽器相同版本的WebDriver版本，或更新您的瀏覽器版本。"
@@ -142,9 +143,8 @@ def get_config_dict(args):
     config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
 
     # allow assign config by command line.
-    if not args.input is None:
-        if len(args.input) > 0:
-            config_filepath = args.input
+    if args.input:
+        config_filepath = args.input
 
     config_dict = None
     if os.path.isfile(config_filepath):
@@ -152,43 +152,34 @@ def get_config_dict(args):
         with open(config_filepath) as json_data:
             config_dict = json.load(json_data)
 
-            if not args.headless is None:
+            if args.headless is not None:
                 config_dict["advanced"]["headless"] = util.t_or_f(args.headless)
 
-            if not args.homepage is None:
-                if len(args.homepage) > 0:
-                    config_dict["homepage"] = args.homepage
+            if args.homepage:
+                config_dict["homepage"] = args.homepage
 
-            if not args.ticket_number is None:
-                if args.ticket_number > 0:
-                    config_dict["ticket_number"] = args.ticket_number
+            if args.ticket_number:
+                config_dict["ticket_number"] = args.ticket_number
 
-            if not args.browser is None:
-                if len(args.browser) > 0:
-                    config_dict["browser"] = args.browser
+            if args.browser:
+                config_dict["browser"] = args.browser
 
-            if not args.tixcraft_sid is None:
-                if len(args.tixcraft_sid) > 0:
-                    config_dict["advanced"]["tixcraft_sid"] = args.tixcraft_sid
+            if args.tixcraft_sid:
+                config_dict["advanced"]["tixcraft_sid"] = args.tixcraft_sid
 
-            if not args.ibonqware is None:
-                if len(args.ibonqware) > 0:
-                    config_dict["advanced"]["ibonqware"] = args.ibonqware
+            if args.ibonqware:
+                config_dict["advanced"]["ibonqware"] = args.ibonqware
 
-            if not args.kktix_account is None:
-                if len(args.kktix_account) > 0:
-                    config_dict["advanced"]["kktix_account"] = args.kktix_account
-            if not args.kktix_password is None:
-                if len(args.kktix_password) > 0:
-                    config_dict["advanced"]["kktix_password_plaintext"] = args.kktix_password
+            if args.kktix_account:
+                config_dict["advanced"]["kktix_account"] = args.kktix_account
+            if args.kktix_password:
+                config_dict["advanced"]["kktix_password_plaintext"] = args.kktix_password
 
-            if not args.proxy_server is None:
-                if len(args.proxy_server) > 2:
-                    config_dict["advanced"]["proxy_server_port"] = args.proxy_server
+            if args.proxy_server:
+                config_dict["advanced"]["proxy_server_port"] = args.proxy_server
 
-            if not args.window_size is None:
-                if len(args.window_size) > 2:
-                    config_dict["advanced"]["window_size"] = args.window_size
+            if args.window_size:
+                config_dict["advanced"]["window_size"] = args.window_size
 
             # special case for headless to enable away from keyboard mode.
             is_headless_enable_ocr = False
@@ -325,11 +316,7 @@ def get_chrome_options(webdriver_path, config_dict):
     return chrome_options
 
 def load_chromdriver_normal(config_dict, driver_type):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
+    show_debug_message = config_dict["advanced"]["verbose"]
 
     driver = None
 
@@ -337,8 +324,7 @@ def load_chromdriver_normal(config_dict, driver_type):
     webdriver_path = os.path.join(Root_Dir, "webdriver")
     chromedriver_path = get_chromedriver_path(webdriver_path)
 
-    if not os.path.exists(webdriver_path):
-        os.mkdir(webdriver_path)
+    os.makedirs(webdriver_path, exist_ok=True)
 
     if not os.path.exists(chromedriver_path):
         print("WebDriver not exist, try to download to:", webdriver_path)
@@ -353,15 +339,11 @@ def load_chromdriver_normal(config_dict, driver_type):
         chrome_options = get_chrome_options(webdriver_path, config_dict)
         try:
             driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-        except Exception as exc:
+        except WebDriverException as exc:
             error_message = str(exc)
             if show_debug_message:
                 print(exc)
-            left_part = None
-            if "Stacktrace:" in error_message:
-                left_part = error_message.split("Stacktrace:")[0]
-                print(left_part)
-
+            left_part = error_message.split("Stacktrace:")[0] if "Stacktrace:" in error_message else None
             if "This version of ChromeDriver only supports Chrome version" in error_message:
                 print(CONST_CHROME_VERSION_NOT_MATCH_EN)
                 print(CONST_CHROME_VERSION_NOT_MATCH_TW)
@@ -379,12 +361,12 @@ def load_chromdriver_normal(config_dict, driver_type):
                 try:
                     chrome_options = get_chrome_options(webdriver_path, config_dict)
                     driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-                except Exception as exc2:
+                except WebDriverException as exc2:
                     print("Selenium 4.11.0 Release with Chrome For Testing Browser.")
                     try:
                         chrome_options = get_chrome_options(webdriver_path, config_dict)
                         driver = webdriver.Chrome(service=Service(), options=chrome_options)
-                    except Exception as exc3:
+                    except WebDriverException as exc3:
                         print(exc3)
                         pass
 
@@ -517,20 +499,28 @@ def load_chromdriver_uc(config_dict):
         is_cache_exist =  util.clean_uc_exe_cache()
 
         fail_1 = False
-        try:
-            options = get_uc_options(uc, config_dict, webdriver_path)
-            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=options, headless=config_dict["advanced"]["headless"])
-        except Exception as exc:
-            print(exc)
-            error_message = str(exc)
-            left_part = None
-            if "Stacktrace:" in error_message:
-                left_part = error_message.split("Stacktrace:")[0]
-                print(left_part)
+        lanch_uc_with_path = True
+        if "macos" in platform.platform().lower():
+            if "arm64" in platform.platform().lower():
+                lanch_uc_with_path = False
 
-            if "This version of ChromeDriver only supports Chrome version" in error_message:
-                print(CONST_CHROME_VERSION_NOT_MATCH_EN)
-                print(CONST_CHROME_VERSION_NOT_MATCH_TW)
+        if lanch_uc_with_path:
+            try:
+                options = get_uc_options(uc, config_dict, webdriver_path)
+                driver = uc.Chrome(driver_executable_path=chromedriver_path, options=options, headless=config_dict["advanced"]["headless"])
+            except Exception as exc:
+                print(exc)
+                error_message = str(exc)
+                left_part = None
+                if "Stacktrace:" in error_message:
+                    left_part = error_message.split("Stacktrace:")[0]
+                    print(left_part)
+
+                if "This version of ChromeDriver only supports Chrome version" in error_message:
+                    print(CONST_CHROME_VERSION_NOT_MATCH_EN)
+                    print(CONST_CHROME_VERSION_NOT_MATCH_TW)
+                fail_1 = True
+        else:
             fail_1 = True
 
         fail_2 = False
@@ -725,27 +715,31 @@ def get_driver_by_config(config_dict):
         print("create web driver object fail @_@;")
     else:
         try:
-            NETWORK_BLOCKED_URLS = ['*/adblock.js'
-            ,'*/google_ad_block.js'
-            ,'*google-analytics.*'
-            ,'*googletagmanager.*'
-            ,'*googletagservices.*'
-            ,'*googlesyndication.*'
-            ,'*play.google.com/*'
-            ,'*cdn.cookielaw.org/*'
-            ,'*fundingchoicesmessages.google.com/*'
-            ,'*.doubleclick.net/*'
-            ,'*.rollbar.com/*'
-            ,'*.cloudfront.com/*'
-            ,'*.lndata.com/*'
-            ,'*.twitter.com/i/*'
-            ,'*platform.twitter.com/*'
-            ,'*syndication.twitter.com/*'
-            ,'*youtube.com/*'
-            ,'*player.youku.*'
-            ,'*.clarity.ms/*'
-            ,'*img.uniicreative.com/*'
-            ,'*e2elog.fetnet.net*']
+            NETWORK_BLOCKED_URLS = [
+                '*.clarity.ms/*',
+                '*.cloudfront.com/*',
+                '*.doubleclick.net/*',
+                '*.lndata.com/*',
+                '*.rollbar.com/*',
+                '*.twitter.com/i/*',
+                '*/adblock.js',
+                '*/google_ad_block.js',
+                '*cityline.com/js/others.min.js',
+                '*anymind360.com/*',
+                '*cdn.cookielaw.org/*',
+                '*e2elog.fetnet.net*',
+                '*fundingchoicesmessages.google.com/*',
+                '*google-analytics.*',
+                '*googlesyndication.*',
+                '*googletagmanager.*',
+                '*googletagservices.*',
+                '*img.uniicreative.com/*',
+                '*platform.twitter.com/*',
+                '*play.google.com/*',
+                '*player.youku.*',
+                '*syndication.twitter.com/*',
+                '*youtube.com/*',
+            ]
 
             if config_dict["advanced"]["hide_some_image"]:
                 NETWORK_BLOCKED_URLS.append('*.woff')
@@ -1814,12 +1808,14 @@ def fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_li
                         if submit_by_enter:
                             form_input_1.send_keys(Keys.ENTER)
                             is_button_clicked = True
-                        if len(next_step_button_css) > 0:
-                            is_button_clicked = press_button(driver, By.CSS_SELECTOR, next_step_button_css)
+                        else:
+                            if len(next_step_button_css) > 0:
+                                is_button_clicked = press_button(driver, By.CSS_SELECTOR, next_step_button_css)
                 except Exception as exc:
                     if show_debug_message:
                         print(exc)
                     pass
+                
                 if is_button_clicked:
                     is_answer_sent = True
                     fail_list.append(inferred_answer_string)
@@ -1829,7 +1825,6 @@ def fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_li
                 if is_answer_sent:
                     for i in range(3):
                         time.sleep(0.1)
-
                         alert_ret = check_pop_alert(driver)
                         if alert_ret:
                             if show_debug_message:
@@ -2027,7 +2022,7 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
 
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER:
             if not Captcha_Browser is None:
-                img_base64 = base64.b64decode(Captcha_Browser.Request_Captcha())
+                img_base64 = base64.b64decode(Captcha_Browser.request_captcha())
 
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS:
             image_id = 'TicketForm_verifyCode-image'
@@ -2062,7 +2057,7 @@ def tixcraft_get_ocr_answer(driver, ocr, ocr_captcha_image_source, Captcha_Brows
                     if img_base64 is None:
                         if not Captcha_Browser is None:
                             print("canvas get image fail, use plan_b: NonBrowser")
-                            img_base64 = base64.b64decode(Captcha_Browser.Request_Captcha())
+                            img_base64 = base64.b64decode(Captcha_Browser.request_captcha())
                 except Exception as exc:
                     if show_debug_message:
                         print("canvas exception:", str(exc))
@@ -2142,7 +2137,7 @@ def tixcraft_auto_ocr(driver, ocr, away_from_keyboard_enable, previous_answer, C
                         else:
                             # Non_Browser solution.
                             if not Captcha_Browser is None:
-                                new_captcha_url = Captcha_Browser.Request_Refresh_Captcha() #取得新的CAPTCHA
+                                new_captcha_url = Captcha_Browser.request_refresh_captcha() #取得新的CAPTCHA
                                 if new_captcha_url != "":
                                     tixcraft_change_captcha(driver, new_captcha_url) #更改CAPTCHA圖
     else:
@@ -2431,77 +2426,30 @@ def kktix_press_next_button(driver):
         button_count = len(but_button_list)
         #print("button_count:",button_count)
         if button_count > 0:
+            btn = but_button_list[button_count-1]
             try:
-                #print("click on last button")
-                but_button_list[button_count-1].click()
+                driver.set_script_timeout(0.1)
+                driver.execute_script("arguments[0].focus();", btn)
                 ret = True
             except Exception as exc:
-                print(exc)
                 pass
-
-    return ret
-
-def kktix_captcha_inputed_text(captcha_inner_div):
-    ret = ""
-    if not captcha_inner_div is None:
-        try:
-            captcha_password_text = captcha_inner_div.find_element(By.TAG_NAME, "input")
-            if not captcha_password_text is None:
-                ret = captcha_password_text.get_attribute('value')
-            else:
-                print("find captcha input field fail")
-        except Exception as exc:
-            print("find captcha_inner_div Exception:")
-            #print(exc)
-            pass
-
-    return ret
-
-def kktix_input_captcha_text(captcha_password_input_element, inferred_answer_string, force_overwrite = False):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    is_captcha_sent = False
-    inputed_captcha_text = ""
-
-    if not captcha_password_input_element is None:
-        if force_overwrite:
-            try:
-                captcha_password_input_element.send_keys(inferred_answer_string)
-                print("send captcha keys:" + inferred_answer_string)
-                is_captcha_sent = True
-            except Exception as exc:
-                pass
-        else:
-            # not force overwrite:
-            inputed_captcha_text = None
-            try:
-                inputed_captcha_text = captcha_password_input_element.get_attribute('value')
-            except Exception as exc:
-                pass
-            if inputed_captcha_text is None:
-                inputed_captcha_text = ""
-
-            if len(inputed_captcha_text) == 0:
+            for retry_idx in range(4):
                 try:
-                    captcha_password_input_element.send_keys(inferred_answer_string)
-                    print("send captcha keys:" + inferred_answer_string)
-                    is_captcha_sent = True
+                    #print("click on last button:", button_count)
+                    btn.click()
+                    time.sleep(0.2)
+                    ret = True
                 except Exception as exc:
+                    print(exc)
                     pass
-            else:
-                if inputed_captcha_text == inferred_answer_string:
-                    is_captcha_sent = True
+                if ret:
+                    break
 
-    return is_captcha_sent
+    return ret
+
 
 def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kktix_area_keyword):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
-
+    show_debug_message = config_dict["advanced"]["verbose"]
     ticket_number = config_dict["ticket_number"]
 
     areas = None
@@ -2706,11 +2654,7 @@ def kktix_travel_price_list(driver, config_dict, kktix_area_auto_select_mode, kk
     return is_dom_ready, is_ticket_number_assigned, areas
 
 def kktix_assign_ticket_number(driver, config_dict, kktix_area_keyword):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
+    show_debug_message = config_dict["advanced"]["verbose"]
 
     ticket_number_str = str(config_dict["ticket_number"])
     auto_select_mode = config_dict["area_auto_select"]["mode"]
@@ -2769,11 +2713,7 @@ def kktix_assign_ticket_number(driver, config_dict, kktix_area_keyword):
 
 
 def kktix_check_agree_checkbox(driver, config_dict):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
+    show_debug_message = config_dict["advanced"]["verbose"]
 
     is_finish_checkbox_click = False
     is_dom_ready = False
@@ -2894,11 +2834,7 @@ def set_kktix_control_label_text(driver, config_dict):
 
 
 def kktix_reg_captcha(driver, config_dict, fail_list, registrationsNewApp_div):
-    show_debug_message = True       # debug.
-    show_debug_message = False      # online
-
-    if config_dict["advanced"]["verbose"]:
-        show_debug_message = True
+    show_debug_message = config_dict["advanced"]["verbose"]
 
     answer_list = []
 
@@ -2919,20 +2855,28 @@ def kktix_reg_captcha(driver, config_dict, fail_list, registrationsNewApp_div):
                 inferred_answer_string = answer_item
                 break
 
+        if len(answer_list) > 0:
+            answer_list = list(dict.fromkeys(answer_list))
+
         if show_debug_message:
             print("inferred_answer_string:", inferred_answer_string)
             print("answer_list:", answer_list)
             print("fail_list:", fail_list)
 
         # PS: auto-focus() when empty inferred_answer_string with empty inputed text value.
-        input_text_css = 'div.custom-captcha-inner > div > div > input'
-        next_step_button_css = ''
-        submit_by_enter = False
-        check_input_interval = 0.2
-        is_answer_sent, fail_list = fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_list, input_text_css, next_step_button_css, submit_by_enter, check_input_interval)
+        if len(inferred_answer_string) > 0:
+            input_text_css = 'div.custom-captcha-inner > div > div > input'
+            next_step_button_css = ''
+            submit_by_enter = False
+            check_input_interval = 0.2
+            is_answer_sent, fail_list = fill_common_verify_form(driver, config_dict, inferred_answer_string, fail_list, input_text_css, next_step_button_css, submit_by_enter, check_input_interval)
 
-        # due multi next buttons(pick seats/best seats)
-        kktix_press_next_button(driver)
+            # due multi next buttons(pick seats/best seats)
+            kktix_press_next_button(driver)
+            time.sleep(0.5)
+
+            fail_list.append(inferred_answer_string)
+        #print("new fail_list:", fail_list)
 
     return fail_list, is_question_popup
 
@@ -3011,6 +2955,29 @@ def kktix_reg_new_main(driver, config_dict, fail_list, played_sound_ticket):
                     control_text = get_text_by_selector(driver, 'div > div.code-input > div.control-group > label.control-label', 'innerText')
                     if show_debug_message:
                         print("control_text:", control_text)
+
+                    if len(control_text) > 0:
+                        input_text_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > input[type="text"]'
+                        input_text_element = None
+                        try:
+                            input_text_element = driver.find_element(By.CSS_SELECTOR, input_text_css)
+                        except Exception as exc:
+                            #print(exc)
+                            pass
+                        if input_text_element is None:
+                            radio_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > input[type="radio"]'
+                            try:
+                                radio_element = driver.find_element(By.CSS_SELECTOR, radio_css)
+                                if radio_element:
+                                    print("found radio")
+                                    joined_button_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > span[ng-if] > a[ng-href="#"]'
+                                    joined_element = driver.find_element(By.CSS_SELECTOR, joined_button_css)
+                                    if joined_element:
+                                        control_text = ""
+                                        print("member joined")
+                            except Exception as exc:
+                                print(exc)
+                                pass
 
                     if len(control_text) == 0:
                         click_ret = kktix_press_next_button(driver)
@@ -4703,18 +4670,20 @@ def cityline_purchase_button_press(driver, config_dict):
     if config_dict["advanced"]["verbose"]:
         show_debug_message = True
 
-
     date_auto_select_mode = config_dict["date_auto_select"]["mode"]
     date_keyword = config_dict["date_auto_select"]["date_keyword"].strip()
     auto_reload_coming_soon_page_enable = config_dict["tixcraft"]["auto_reload_coming_soon_page"]
 
     if show_debug_message:
         print("date_keyword:", date_keyword)
+    
     is_date_assign_by_bot = cityline_date_auto_select(driver, date_auto_select_mode, date_keyword, auto_reload_coming_soon_page_enable)
 
     is_button_clicked = False
     if is_date_assign_by_bot:
+        print("press purchase button")
         is_button_clicked = press_button(driver, By.CSS_SELECTOR, 'button.purchase-btn')
+        time.sleep(0.2)
 
     return is_button_clicked
 
@@ -5739,10 +5708,10 @@ def set_non_browser_cookies(driver, url, Captcha_Browser):
         #PS: need set cookies once, if user change domain.
         if not Captcha_Browser is None:
             try:
-                Captcha_Browser.Set_cookies(driver.get_cookies())
+                Captcha_Browser.set_cookies(driver.get_cookies())
             except Exception as e:
                 pass
-            Captcha_Browser.Set_Domain(domain_name)
+            Captcha_Browser.set_domain(domain_name)
 
 def ticketmaster_parse_zone_info(driver, config_dict):
     show_debug_message = True       # debug.
@@ -5953,7 +5922,20 @@ def ticketmaster_captcha(driver, config_dict, ocr, Captcha_Browser, domain_name)
             if current_url != last_url:
                 break
 
-def tixcraft_main(driver, url, config_dict, tixcraft_dict, ocr, Captcha_Browser):
+def tixcraft_main(driver, url, config_dict, ocr, Captcha_Browser):
+    global tixcraft_dict
+    if not 'tixcraft_dict' in globals():
+        tixcraft_dict = {}
+        tixcraft_dict["fail_list"]=[]
+        tixcraft_dict["fail_promo_list"]=[]
+        tixcraft_dict["start_time"]=None
+        tixcraft_dict["done_time"]=None
+        tixcraft_dict["elapsed_time"]=None
+        tixcraft_dict["is_popup_checkout"] = False
+        tixcraft_dict["area_retry_count"]=0
+        tixcraft_dict["played_sound_ticket"] = False
+        tixcraft_dict["played_sound_order"] = False
+
     tixcraft_home_close_window(driver)
 
     home_url_list = ['https://tixcraft.com/'
@@ -6070,9 +6052,9 @@ def tixcraft_main(driver, url, config_dict, tixcraft_dict, ocr, Captcha_Browser)
         tixcraft_dict["is_popup_checkout"] = False
         tixcraft_dict["played_sound_order"] = False
 
-    return tixcraft_dict, is_quit_bot
+    return is_quit_bot
 
-def kktix_paused_main(driver, url, config_dict, kktix_dict):
+def kktix_paused_main(driver, url, config_dict):
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if '/users/sign_in?' in url:
@@ -6104,9 +6086,19 @@ def kktix_paused_main(driver, url, config_dict, kktix_dict):
                 select_query = 'button[disabled="disabled"]'
                 class_name = 'disabled'
                 remove_attribute_tag_by_selector(driver, select_query, class_name)
-    return kktix_dict
 
-def kktix_main(driver, url, config_dict, kktix_dict):
+def kktix_main(driver, url, config_dict):
+    global kktix_dict
+    if not 'kktix_dict' in globals():
+        kktix_dict = {}
+        kktix_dict["fail_list"]=[]
+        kktix_dict["start_time"]=None
+        kktix_dict["done_time"]=None
+        kktix_dict["elapsed_time"]=None
+        kktix_dict["is_popup_checkout"] = False
+        kktix_dict["played_sound_ticket"] = False
+        kktix_dict["played_sound_order"] = False
+
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if '/users/sign_in?' in url:
@@ -6219,7 +6211,7 @@ def kktix_main(driver, url, config_dict, kktix_dict):
         kktix_dict["is_popup_checkout"] = False
         kktix_dict["played_sound_order"] = False
 
-    return kktix_dict, is_quit_bot
+    return is_quit_bot
 
 def fami_login(driver, account, password):
     is_email_sent = assign_text(driver, By.CSS_SELECTOR, '#usr_act', account)
@@ -6228,7 +6220,13 @@ def fami_login(driver, account, password):
         is_password_sent = assign_text(driver, By.CSS_SELECTOR, '#usr_pwd', password, submit=True)
     return is_password_sent
 
-def famiticket_main(driver, url, config_dict, fami_dict):
+def famiticket_main(driver, url, config_dict):
+    global fami_dict
+    if not 'fami_dict' in globals():
+        fami_dict = {}
+        fami_dict["fail_list"] = []
+        fami_dict["last_activity"]=""
+
     if '/Home/User/SignIn' in url:
         fami_account = config_dict["advanced"]["fami_account"]
         fami_password = config_dict["advanced"]["fami_password_plaintext"].strip()
@@ -6248,7 +6246,6 @@ def famiticket_main(driver, url, config_dict, fami_dict):
         if config_dict["date_auto_select"]["enable"]:
             is_date_assign_by_bot = fami_home_auto_select(driver, config_dict, fami_dict["last_activity"])
 
-    return fami_dict
 
 def urbtix_performance_confirm_dialog_popup(driver):
     ret = False
@@ -6753,7 +6750,8 @@ def cityline_close_second_tab(driver):
 def cityline_main(driver, url, config_dict):
     # https://msg.cityline.com/ https://event.cityline.com/
     if 'msg.cityline.com' in url or 'event.cityline.com' in url:
-        cityline_auto_retry_access(driver, config_dict)
+        #cityline_auto_retry_access(driver, config_dict)
+        pass
 
     cityline_close_second_tab(driver)
 
@@ -6988,7 +6986,7 @@ def ibon_auto_ocr(driver, config_dict, ocr, away_from_keyboard_enable, previous_
         img_base64 = None
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER:
             if not Captcha_Browser is None:
-                img_base64 = base64.b64decode(Captcha_Browser.Request_Captcha())
+                img_base64 = base64.b64decode(Captcha_Browser.request_captcha())
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS:
             image_id = 'chk_pic'
             image_element = None
@@ -7053,7 +7051,7 @@ def ibon_auto_ocr(driver, config_dict, ocr, away_from_keyboard_enable, previous_
                     else:
                         # Non_Browser solution.
                         if not Captcha_Browser is None:
-                            new_captcha_url = Captcha_Browser.Request_Refresh_Captcha() #取得新的CAPTCHA
+                            new_captcha_url = Captcha_Browser.request_refresh_captcha() #取得新的CAPTCHA
                             if new_captcha_url != "":
                                 #PS:[TODO]
                                 #tixcraft_change_captcha(driver, new_captcha_url) #更改CAPTCHA圖
@@ -7104,7 +7102,15 @@ def ibon_captcha(driver, config_dict, ocr, Captcha_Browser, model_name):
 
     return is_captcha_sent
 
-def ibon_main(driver, url, config_dict, ibon_dict, ocr, Captcha_Browser):
+def ibon_main(driver, url, config_dict, ocr, Captcha_Browser):
+    global ibon_dict
+    if not 'ibon_dict' in globals():
+        ibon_dict = {}
+        ibon_dict["fail_list"]=[]
+        ibon_dict["start_time"]=None
+        ibon_dict["done_time"]=None
+        ibon_dict["elapsed_time"]=None
+
     home_url_list = ['https://ticket.ibon.com.tw/'
     ,'https://ticket.ibon.com.tw/index/entertainment'
     ]
@@ -7218,7 +7224,7 @@ def ibon_main(driver, url, config_dict, ibon_dict, ocr, Captcha_Browser):
                         captcha_url = '/pic.aspx?TYPE=%s' % (model_name)
                         #PS: need set cookies once, if user change domain.
                         if not Captcha_Browser is None:
-                            Captcha_Browser.Set_Domain(domain_name, captcha_url=captcha_url)
+                            Captcha_Browser.set_domain(domain_name, captcha_url=captcha_url)
 
                         is_captcha_sent = ibon_captcha(driver, config_dict, ocr, Captcha_Browser, model_name)
 
@@ -7277,7 +7283,6 @@ def ibon_main(driver, url, config_dict, ibon_dict, ocr, Captcha_Browser):
                     if not is_name_based:
                         is_button_clicked = press_button(driver, By.CSS_SELECTOR, 'a.btn.btn-pink.continue')
 
-    return ibon_dict
 
 def hkticketing_accept_cookie(driver):
     show_debug_message = True    # debug.
@@ -8128,7 +8133,7 @@ def hkticketing_content_refresh(driver, url, config_dict):
     , "System.ComponentModel.Win32Exception"
     , "Access Denied"
     , "Your attempt to access the web site has been blocked by"
-    , "This requset was blocked by"
+    , "This request was blocked by"
     ]
     if is_check_access_deined:
         domain_name = url.split('/')[2]
@@ -8204,7 +8209,13 @@ def hkticketing_travel_iframe(driver, config_dict):
 
     return is_redirected
 
-def softix_powerweb_main(driver, url, config_dict, hkticketing_dict):
+def softix_powerweb_main(driver, url, config_dict):
+    global hkticketing_dict
+    if not 'hkticketing_dict' in globals():
+        hkticketing_dict = {}
+        hkticketing_dict["is_date_submiting"] = False
+        hkticketing_dict["fail_list"]=[]
+
     hkticketing_accept_cookie(driver)
 
     is_redirected = hkticketing_url_redirect(driver, url, config_dict)
@@ -8274,12 +8285,11 @@ def softix_powerweb_main(driver, url, config_dict, hkticketing_dict):
                 hkticketing_nav_to_footer(driver)
                 hkticketing_go_to_payment(driver)
 
-    return hkticketing_dict
 
 def khan_go_buy_redirect(driver, domain_name):
     is_button_clicked = False
     if 'kham.com' in domain_name:
-        is_button_clicked = press_button(driver, By.CSS_SELECTOR, 'p > a > button.red')
+        is_button_clicked = press_button(driver, By.CSS_SELECTOR, 'div#content > p > a > button[onclick].red')
     if 'ticket.com' in domain_name:
         is_button_clicked = press_button(driver, By.CSS_SELECTOR, 'div.row > div > a.btn.btn-order.btn-block')
     if 'udnfunlife.com' in domain_name:
@@ -8311,8 +8321,10 @@ def hkam_date_auto_select(driver, domain_name, config_dict):
     try:
         # for kham.com
         my_css_selector = "table.eventTABLE > tbody > tr"
+        
         if 'ticket.com' in domain_name:
             my_css_selector = "div.description > table.table.table-striped.itable > tbody > tr"
+        
         if 'udnfunlife.com' in domain_name:
             my_css_selector = "div.yd_session-block"
 
@@ -8379,19 +8391,19 @@ def hkam_date_auto_select(driver, domain_name, config_dict):
                     else:
                         # kham.
                         price_disabled_html = '"lightblue"'
+                        
                         if 'ticket.com' in domain_name:
                             price_disabled_html = '<del>'
 
                         if "<td" in row_html:
                             td_array = row_html.split("<td")
                             if len(td_array) > 3:
-                                td_target = "<td" + td_array[3]
+                                td_target = td_array[3]
                                 price_array = td_target.split("、")
                                 is_all_priece_disabled = True
                                 for each_price in price_array:
                                     if not (price_disabled_html in each_price):
                                         is_all_priece_disabled = False
-
                                 if is_all_priece_disabled:
                                     row_text = ""
 
@@ -8951,7 +8963,7 @@ def kham_auto_ocr(driver, config_dict, ocr, away_from_keyboard_enable, previous_
         img_base64 = None
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER:
             if not Captcha_Browser is None:
-                img_base64 = base64.b64decode(Captcha_Browser.Request_Captcha())
+                img_base64 = base64.b64decode(Captcha_Browser.request_captcha())
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS:
             image_id = 'chk_pic'
             image_element = None
@@ -9016,7 +9028,7 @@ def kham_auto_ocr(driver, config_dict, ocr, away_from_keyboard_enable, previous_
                     else:
                         # Non_Browser solution.
                         if not Captcha_Browser is None:
-                            new_captcha_url = Captcha_Browser.Request_Refresh_Captcha() #取得新的CAPTCHA
+                            new_captcha_url = Captcha_Browser.request_refresh_captcha() #取得新的CAPTCHA
                             if new_captcha_url != "":
                                 #PS:[TODO]
                                 #tixcraft_change_captcha(driver, new_captcha_url) #更改CAPTCHA圖
@@ -9136,8 +9148,8 @@ def kham_main(driver, url, config_dict, ocr, Captcha_Browser):
 
             if config_dict["ocr_captcha"]["enable"]:
                 if not Captcha_Browser is None:
-                    Captcha_Browser.Set_cookies(driver.get_cookies())
-                    Captcha_Browser.Set_Domain(domain_name)
+                    Captcha_Browser.set_cookies(driver.get_cookies())
+                    Captcha_Browser.set_domain(domain_name)
             break
 
     #https://kham.com.tw/application/UTK02/UTK0201_.aspx?PRODUCT_ID=XXX
@@ -9147,7 +9159,8 @@ def kham_main(driver, url, config_dict, ocr, Captcha_Browser):
             is_event_page = True
 
         if is_event_page:
-            khan_go_buy_redirect(driver, domain_name)
+            #khan_go_buy_redirect(driver, domain_name)
+            pass
 
     # https://kham.com.tw/application/UTK02/UTK0201_00.aspx?PRODUCT_ID=N28TFATD
     if 'utk0201_00.aspx?product_id=' in url.lower():
@@ -9230,7 +9243,7 @@ def kham_main(driver, url, config_dict, ocr, Captcha_Browser):
             captcha_url = '/pic.aspx?TYPE=%s' % (model_name)
             #PS: need set cookies once, if user change domain.
             if not Captcha_Browser is None:
-                Captcha_Browser.Set_Domain(domain_name, captcha_url=captcha_url)
+                Captcha_Browser.set_domain(domain_name, captcha_url=captcha_url)
 
             is_captcha_sent = False
 
@@ -9298,7 +9311,7 @@ def kham_main(driver, url, config_dict, ocr, Captcha_Browser):
             captcha_url = '/pic.aspx?TYPE=%s' % (model_name)
             #PS: need set cookies once, if user change domain.
             if not Captcha_Browser is None:
-                Captcha_Browser.Set_Domain(domain_name, captcha_url=captcha_url)
+                Captcha_Browser.set_domain(domain_name, captcha_url=captcha_url)
 
             is_captcha_sent = False
             if config_dict["ocr_captcha"]["enable"]:
@@ -9348,7 +9361,7 @@ def kham_main(driver, url, config_dict, ocr, Captcha_Browser):
                 captcha_url = '/pic.aspx?TYPE=%s' % (model_name)
                 #PS: need set cookies once, if user change domain.
                 if not Captcha_Browser is None:
-                    Captcha_Browser.Set_Domain(domain_name, captcha_url=captcha_url)
+                    Captcha_Browser.set_domain(domain_name, captcha_url=captcha_url)
 
                 kham_captcha(driver, config_dict, ocr, Captcha_Browser, model_name)
 
@@ -10163,7 +10176,7 @@ def ticketplus_auto_ocr(driver, config_dict, ocr, previous_answer, Captcha_Brows
         img_base64 = None
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_NON_BROWSER:
             if not Captcha_Browser is None:
-                img_base64 = base64.b64decode(Captcha_Browser.Request_Captcha())
+                img_base64 = base64.b64decode(Captcha_Browser.request_captcha())
         if ocr_captcha_image_source == CONST_OCR_CAPTCH_IMAGE_SOURCE_CANVAS:
             image_id = 'span.captcha-img'
             image_element = None
@@ -10612,7 +10625,13 @@ def ticketplus_ticket_agree(driver, config_dict):
 def ticketplus_confirm(driver, config_dict):
     is_checkbox_checked = ticketplus_ticket_agree(driver, config_dict)
 
-def ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser, ticketplus_dict):
+def ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser):
+    global ticketplus_dict
+    if not 'ticketplus_dict' in globals():
+        ticketplus_dict = {}
+        ticketplus_dict["fail_list"]=[]
+        ticketplus_dict["is_popup_confirm"] = False
+
     home_url_list = ['https://ticketplus.com.tw/']
     is_user_signin = False
     for each_url in home_url_list:
@@ -10620,8 +10639,8 @@ def ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser, ticketplus_d
             if config_dict["ocr_captcha"]["enable"]:
                 domain_name = url.split('/')[2]
                 if not Captcha_Browser is None:
-                    Captcha_Browser.Set_cookies(driver.get_cookies())
-                    Captcha_Browser.Set_Domain(domain_name)
+                    Captcha_Browser.set_cookies(driver.get_cookies())
+                    Captcha_Browser.set_domain(domain_name)
 
             is_user_signin = ticketplus_account_auto_fill(driver, config_dict)
             if is_user_signin:
@@ -10695,7 +10714,6 @@ def ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser, ticketplus_d
     else:
         ticketplus_dict["is_popup_confirm"] = False
 
-    return ticketplus_dict
 
 def facebook_main(driver, config_dict):
     facebook_account = config_dict["advanced"]["facebook_account"].strip()
@@ -10845,46 +10863,6 @@ def main(args):
     url = ""
     last_url = ""
 
-    # for tixcraft
-    tixcraft_dict = {}
-    tixcraft_dict["fail_list"]=[]
-    tixcraft_dict["fail_promo_list"]=[]
-    tixcraft_dict["start_time"]=None
-    tixcraft_dict["done_time"]=None
-    tixcraft_dict["elapsed_time"]=None
-    tixcraft_dict["is_popup_checkout"] = False
-    tixcraft_dict["area_retry_count"]=0
-    tixcraft_dict["played_sound_ticket"] = False
-    tixcraft_dict["played_sound_order"] = False
-
-    # for kktix
-    kktix_dict = {}
-    kktix_dict["fail_list"]=[]
-    kktix_dict["start_time"]=None
-    kktix_dict["done_time"]=None
-    kktix_dict["elapsed_time"]=None
-    kktix_dict["is_popup_checkout"] = False
-    kktix_dict["played_sound_ticket"] = False
-    kktix_dict["played_sound_order"] = False
-
-    fami_dict = {}
-    fami_dict["fail_list"] = []
-    fami_dict["last_activity"]=""
-
-    ibon_dict = {}
-    ibon_dict["fail_list"]=[]
-    ibon_dict["start_time"]=None
-    ibon_dict["done_time"]=None
-    ibon_dict["elapsed_time"]=None
-
-    hkticketing_dict = {}
-    hkticketing_dict["is_date_submiting"] = False
-    hkticketing_dict["fail_list"]=[]
-
-    ticketplus_dict = {}
-    ticketplus_dict["fail_list"]=[]
-    ticketplus_dict["is_popup_confirm"] = False
-
     ocr = None
     Captcha_Browser = None
     try:
@@ -10909,6 +10887,7 @@ def main(args):
 
         if not is_quit_bot:
             url, is_quit_bot = get_current_url(driver)
+            #print("url:", url)
 
         if is_quit_bot:
             try:
@@ -10938,7 +10917,7 @@ def main(args):
 
         if is_maxbot_paused:
             if 'kktix.c' in url:
-                kktix_dict = kktix_paused_main(driver, url, config_dict, kktix_dict)
+                kktix_paused_main(driver, url, config_dict)
             # sleep more when paused.
             time.sleep(0.1)
             continue
@@ -10960,17 +10939,17 @@ def main(args):
             tixcraft_family = True
 
         if tixcraft_family:
-            tixcraft_dict, is_quit_bot = tixcraft_main(driver, url, config_dict, tixcraft_dict, ocr, Captcha_Browser)
+            is_quit_bot = tixcraft_main(driver, url, config_dict, ocr, Captcha_Browser)
 
         # for kktix.cc and kktix.com
         if 'kktix.c' in url:
-            kktix_dict, is_quit_bot = kktix_main(driver, url, config_dict, kktix_dict)
+            is_quit_bot = kktix_main(driver, url, config_dict)
 
         if 'famiticket.com' in url:
-            fami_dict = famiticket_main(driver, url, config_dict, fami_dict)
+            famiticket_main(driver, url, config_dict)
 
         if 'ibon.com' in url:
-            ibon_dict = ibon_main(driver, url, config_dict, ibon_dict, ocr, Captcha_Browser)
+            ibon_main(driver, url, config_dict, ocr, Captcha_Browser)
 
         kham_family = False
         if 'kham.com.tw' in url:
@@ -10986,7 +10965,7 @@ def main(args):
             kham_main(driver, url, config_dict, ocr, Captcha_Browser)
 
         if 'ticketplus.com' in url:
-            ticketplus_dict = ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser, ticketplus_dict)
+            ticketplus_main(driver, url, config_dict, ocr, Captcha_Browser)
 
         if 'urbtix.hk' in url:
             urbtix_main(driver, url, config_dict)
@@ -11002,7 +10981,7 @@ def main(args):
         if 'ticketek.com' in url:
             softix_family = True
         if softix_family:
-            hkticketing_dict = softix_powerweb_main(driver, url, config_dict, hkticketing_dict)
+            softix_powerweb_main(driver, url, config_dict)
 
         # for facebook signin
         facebook_login_url = 'https://www.facebook.com/login.php?'
@@ -11065,32 +11044,7 @@ def cli():
 
 def test_captcha_model():
     #for test kktix answer.
-    captcha_text_div_text = "請回答下列問題,請在下方空格輸入DELIGHT（請以半形輸入法作答，大小寫需要一模一樣）"
-    #captcha_text_div_text = "請在下方空白處輸入引號內文字：「abc」"
-    #captcha_text_div_text = "請在下方空白處輸入引號內文字：「0118eveconcert」（請以半形小寫作答。）"
-    #captcha_text_div_text = "請在下方空白處輸入括號內數字(12 34)"
-    #captcha_text_div_text = "請輸入括弧內數字( 27８９41 )"
-    #captcha_text_div_text = "在《DEEP AWAKENING見過深淵的人》專輯中，哪一首為合唱曲目？ 【V6】深淵 、【Z5】浮木、【J8】無聲、【C1】以上皆非 （請以半形輸入法作答，大小寫/阿拉伯數字需要一模一樣，範例：A2）"
-    #captcha_text_div_text = "Super Junior 的隊長是以下哪位?  【v】神童 【w】藝聲 【x】利特 【y】始源  若你覺得答案為 a，請輸入 a  (英文為半形小寫)"
-    #captcha_text_div_text = "請問XXX, 請以英文為半形小寫(例如：a) a. 1月5日 b. 2月5日 c. 3月5日 d. 4月5日"
-    #captcha_text_div_text = "以下為選擇題：請問 「OHM NANON 1st Fan Meeting in Hong Kong」 舉行日期是？請以半形細楷英文於下方輸入答案 (例如：a)  a. 1月5日 b. 2月5日 c. 3月5日 d. 4月5日"
-    #captcha_text_div_text = "以下哪個「不是」正確的林俊傑與其他藝人合唱的歌曲組合？（選項為歌名/合作藝人 ，請以半形輸入法作答選項，大小寫需要一模一樣，範例:jju） 選項： (jja)小酒窩/A-Sa蔡卓妍 (jjb)被風吹過的夏天/金莎 (jjc)友人說/張懷秋 (jjd)全面開戰/五月天阿信 (jje)小說/阿杜"
-    #captcha_text_div_text = "請問《龍的傳人2060》演唱會是以下哪位藝人的演出？（請以半形輸入法作答，大小寫需要一模一樣，範例：B2）A1.周杰倫 B2.林俊傑 C3.張學友 D4.王力宏"
-    #captcha_text_div_text = "王力宏何時發行第一張專輯?（請以半形輸入法作答，大小寫需要一模一樣，範例:B2） A1.1985 B2.2005 C3.2015 D4.1995"
-    #captcha_text_div_text = "朴寶劍三月以歌手出道的日期和單曲名為？ Answer the single’s name & the debut date. *以半形輸入，大小寫/符號須都相同。例:(E1) Please use the same format given in the options.ex:(E1) (A1)20/Bloomin'(B1)2/Blossom(C1)2/Bloomin'(D1)20/Blossom"
-    #captcha_text_div_text = "以下哪位不是LOVELYZ成員? (請以半形輸入選項內的英文及數字，大小寫須符合)，範例:E5e。 (A1a)智愛 (B2b)美珠 (C3c)JON (D4d)叡仁"
-    #captcha_text_div_text = "題請問此次 RAVI的SOLO專輯名稱為?（請以半形輸入法作答，大小寫需要一模一樣，範例:Tt） Aa [ BOOK] 、 Bb [OOK BOOK.R] 、 Cc [R.OOK BOOK] 、 Dd [OOK R. BOOK]"
-    #captcha_text_div_text = "請問下列哪個選項皆為河成雲的創作歌曲？ Aa) Don’t Forget、Candle Bb) Don’t Forget、Forever+1 Cc) Don’t Forget、Flowerbomb Dd) Don’t Forget、One Love 請以半形輸入，大小寫含括號需一模一樣 【範例:答案為B需填入Bb)】"
-    #captcha_text_div_text = "魏如萱得過什麼獎?(1) 金馬獎 最佳女主角(2) 金鐘獎 戲劇節目女主角(3) 金曲獎 最佳華語女歌手(4) 走鐘獎 好好聽音樂獎 (請輸入半形數字)"
-    #captcha_text_div_text = "Love in the Air 是由哪兩本小說改篇而成呢？(A)Love Strom & Love Sky (B)Love Rain & Love Cloud (C)Love Wind & Love Sun (D)Love Dry & Love Cold (請輸入選項大寫英文單字 範例：E)"
-    #captcha_text_div_text = "請問以下哪一部戲劇是Off Gun合作出演的戲劇？【1G】Midnight Museum 【2F】10 Years Ticket 【8B】Not Me (請以半形輸入法作答，大小寫/阿拉伯數字需要一模一樣，範例：9A)"
-    #captcha_text_div_text = "請將以下【歌曲】已發行日期由「新到舊」依序排列 【H1】 After LIKE 【22】 I AM 【R3】 ELEVEN 【74】LOVE DIVE 請以半形輸入法輸入正確答案之\"選項\"，大小寫/阿拉伯數字需要一模一樣，範例：A142X384"
-    #captcha_text_div_text = "請將以下【歌曲】已發行日期由「新到舊」依序排列 【H】 After LIKE 【2】 I AM 【R】 ELEVEN 【7】LOVE DIVE 請以半形輸入法輸入正確答案之\"選項\"，大小寫/阿拉伯數字需要一模一樣，範例：A4X8"
-    #captcha_text_div_text = "1. 以下哪個為正確的OffGun粉絲名稱？（請以半形數字及細楷英文字母於下方輸入答案）\n3f）Baby\n6r）Babii\n9e）Babe"
-    #captcha_text_div_text = "2. 以下那齣並不是OffGun有份演出的劇集？（請以半形數字及細楷英文字母於下方輸入答案）\n2m）《我的貓貓男友》\n4v）《愛情理論》\n6k）《Not Me》"
-    #captcha_text_div_text = "2. 以下那齣並不是OffGun有份演出的劇集？（請以半形數字及細楷英文字母於下方輸入答案）\n2m:《我的貓貓男友》\n4v:《愛情理論》\n6k:《Not Me》"
-    #captcha_text_div_text = "夏賢尚的官方粉絲名稱為？ What is the name of Ha Hyun Sang's official fandom?   1. PET / 2. PAN / 3. PENCIL / 4. PEN （請填寫選項「純數字」/ Please only enter the number）"
-    #captcha_text_div_text = "夏賢尚的官方粉絲名稱為？ What is the name of Ha Hyun Sang's official fandom?   A. PET / B. PAN / C. PENCIL / D. PEN （請填寫選項「純數字」/ Please only enter the number）"
+    captcha_text_div_text = "請輸入括弧內數字( 27８９41 )"
     answer_list = util.get_answer_list_from_question_string(None, captcha_text_div_text)
     print("answer_list:", answer_list)
 

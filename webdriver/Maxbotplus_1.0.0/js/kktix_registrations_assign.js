@@ -56,9 +56,10 @@ function kktix_area_keyword(settings, base_info, register_info)
     // console.log(area_keyword_array);
     let target_area = null;
     let matched_block=[];
+    let query_string = "div.ticket-unit";
     if(area_keyword_array.length) {
         for (let i = 0; i < area_keyword_array.length; i++) {
-            $("div.ticket-unit").each(function ()
+            $(query_string).each(function ()
             {
                 let html_text=$(this).text();
                 if(html_text.indexOf(area_keyword_array[i])>-1) {
@@ -73,7 +74,7 @@ function kktix_area_keyword(settings, base_info, register_info)
             }
         }
     } else {
-        $("div.ticket-unit").each(function ()
+        $(query_string).each(function ()
         {
             matched_block.push($(this));
         });
@@ -138,13 +139,15 @@ function kktix_area_keyword(settings, base_info, register_info)
                     add_button.click();
                 }
 
-                let auto_click_next_btn = true;
+                let auto_click_next_btn = settings.kktix.auto_press_next_step_button;
 
-                if(is_verification_conditions_popup) {
-                    auto_click_next_btn = false;
-                    let is_text_sent = kktix_verification_conditions(settings);
-                    if(is_text_sent) {
-                        auto_click_next_btn = true;
+                if(auto_click_next_btn) {
+                    if(is_verification_conditions_popup) {
+                        auto_click_next_btn = false;
+                        let is_text_sent = kktix_verification_conditions(settings);
+                        if(is_text_sent) {
+                            auto_click_next_btn = true;
+                        }
                     }
                 }
 

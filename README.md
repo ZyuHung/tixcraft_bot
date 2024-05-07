@@ -1,24 +1,52 @@
-# Max搶票機器人
-MaxBot是一個免費、開放原始碼的搶票機器人。祝您搶票成功。
+# Max蛋黃酥上車機器人
+MaxBot是一個免費、開放原始碼的蛋黃酥/公車訂位機器人。祝您搶購成功。
 
-MaxBot is a FREE and open source bot program. Good luck getting your expected ticket.
+搶票機制，就是在比誰的網路快、電腦配備好、手速快，或是在比誰的機器人跑的快。
+
+售票系統完全無法阻擋機器人進行搶票，也無法透過驗證碼確定為真人，因此售票系統的「驗證碼」機制只是讓一般民眾更難公平地購買到預期的門票。
+
+目前售票系統還有另一個問題，就是可以透過「人海戰術」來提升買到票的機率，因此建議大家可以麻煩親朋好友去註冊售票系統的帳號。注意，在借用他人帳號前，一定要告知當事人用途，並徵詢同意與授權。
+
+MaxBot 的出發點是讓一般民眾與代購黃牛或懂得寫程式的人有類似的基準點或類似的起跑線上，用魔法對抗魔法，當某一天大家都是透過機器人來搶票時，當機器人數量已多到影響一般民眾購票的權利時，售票業者才比較有可能會對未來熱門演唱會改採「實名制」+「抽籤制」，讓更多民眾可以公平地購買到門票，就可以跟「人海戰術」與「搶票機器人」說 bye-bye 。
+
+台灣藝文活動的文創法第十條中的「不正方式」由於沒有明確定義，代表的是所有軟體都涉嫌違反。故在此呼籲大家，勿以身試法。
+
+以下文章出現的「搶票」指的是「非台灣的藝文活動或車票」。
+
+MaxBot is a FREE and open source bot program. Good luck getting your expected food or bus seat.
+
+# LEGAL NOTICE
+(法律聲明)
+
+作者沒有意圖要他人購得的票券進行加價轉售或是使用在違法的事情上，他人的行為並不在作者的意識支配範圍之內，作者不對他人的非法行為負責。
+
+使用此儲存庫或與之相關的任何程式碼，即表示您同意[法律聲明](https://github.com/max32002/tixcraft_bot/blob/master/LEGAL_NOTICE.md)。作者不對該儲存庫的使用負責與背書，也不對其他使用者所做的任何副本、分叉、重新上傳或與 MaxBot 相關的任何其他內容負責。 這是作者唯一的帳戶和儲存庫。 為了防止假冒或不負責任的行為，請遵守此儲存庫使用的 GNU GPL 授權。
+
+# Protect Account
+(保護你的帳戶)
+
+目前的售票系統售票無法阻擋機器人進行購票，官方只能從伺服器存取記錄來看到速度過快的記錄，並將之視之為機器人，對其封鎖帳號，短時間刷新幾秒會被鎖帳號並沒有明確的遊戲規則。
+
+Q：在沒有違法的前提下，要搶拓元的蛋黃酥與KKTIX的（非台灣）海外活動，怎麼才不會被官方鎖帳號？
+
+A：從之前MaxBot執行秒數來看，較好的電腦花費秒數大約8秒，一般電腦大約花費10～12秒，以秒殺的蛋黃酥來說，建議設定機器人啟動時間為開搶前2秒，停止時間為開搶後的15秒，是可以降低被官方鎖帳號的機率。
+
+而清票，需要長時間地重新整理，請以自然人能處理的前提下，設定重新整理的延遲時間為一般人可以處理的2秒以上。
+
+如果說你想增加在伺服器上存取記錄的變化程度，可以使用秒數的關鍵字功能，讓MaxBot 在特定秒數時啟動與暫停。參考影片：https://youtu.be/u3YQCZZu6kE
+
+MaxBot 的出發點是幫助大家在購票時，可以有效率地自動化在花時間、重覆又無聊的刷新網頁。如果有任何違法，必定立即修正。
+
 
 # Download 
 (搶票程式下載)
 
-目前有打包的「執行檔」，只有Windows 平台，其他作業系統需要使用原始碼來執行。當然Windows 平台也可以用原始碼執行MaxBot.
-
 https://github.com/max32002/tixcraft_bot/releases
 
-如果你是要用「原始碼」執行MaxBot, 在透過git clone 或在github按下載原始碼的 zip檔，你的python 版本可以使用3.7 / 3.8 / 3.9 / 3.10 這4個版號。
-
-如果有辦法的話，建議使用原始碼來執行MaxBot，執行上的「效率」與「相容性」的問題會較少。
-
-使用原始碼的解法，第一步是先取得原始碼後，開啟 Terminal 視窗來下指令，應該是4行指令就可以了。
-
-請參看看文章: 如何用虛擬主機搶拓元的門票，這篇文章是以虛擬主機來示範，在 Windows / macOS / Linux 平台裡的 python 操作方式幾乎相同。
-
-https://max-everyday.com/2023/11/buy-ticket-by-vm/#maxbot
+下載說明:
+* 目前有打包的「執行檔」，只有Windows 平台，其他作業系統需要使用原始碼來執行。當然Windows 平台也可以用原始碼執行MaxBot.
+* 如果你是要用「原始碼」執行MaxBot, 在透過git clone 或在github按下載原始碼的 zip檔，你的python 版本可以使用3.7 / 3.8 / 3.9 / 3.10 這4個版號。
+* 如果有辦法的話，建議使用原始碼來執行MaxBot，執行上的「效率」與「相容性」的問題會較少。
 
 # Demo 
 (示範影片)
@@ -30,8 +58,6 @@ https://github.com/max32002/tixcraft_bot/blob/master/demo_video.md
 
 * tixcraft / indievox / ticketmaster: https://max-everyday.com/2018/03/tixcraft-bot/
 * kktix: https://max-everyday.com/2018/12/kktix-bot/
-* FamiTicket: https://max-everyday.com/2019/01/maxbot-famiticket/
-* ibon: https://max-everyday.com/2023/01/ibon-bot/
 * cityline: https://max-everyday.com/2019/03/cityline-bot/
 * urbtix: https://max-everyday.com/2019/02/urbtix-bot/
 * hkticketing / galaxymacau: https://max-everyday.com/2023/01/hkticketing-bot/
@@ -42,19 +68,26 @@ https://github.com/max32002/tixcraft_bot/blob/master/demo_video.md
 透過原始碼執行MaxBot教學影片：
 https://youtu.be/HpVG91j0lbI
 
-Step 1: 取得source code:
+使用原始碼的解法，第一步是先取得原始碼後，開啟 Terminal 視窗來下指令，應該是4行指令就可以了。
+
+請參看看文章: 如何用虛擬主機搶拓元的門票，這篇文章是以虛擬主機來示範，在 Windows / macOS / Linux 平台裡的 python 操作方式幾乎相同。
+
+詳細的文字說明: 
+https://max-everyday.com/2023/11/buy-ticket-by-vm/
+
+### Step 1: 取得source code:
 
 <code>git clone https://github.com/max32002/tixcraft_bot.git</code>
 
-Step 2: 進入 clone 的資料夾: tixcraft_bot:
+### Step 2: 進入 clone 的資料夾: tixcraft_bot:
 
 <code>cd tixcraft_bot </code>
 
-Step 3: 安裝第三方套件:
+### Step 3: 安裝第三方套件:
 
-<code>python3 -m pip install -r pip-req.txt</code>
+<code>python3 -m pip install -r requirement.txt</code>
 
-Step 4: 執行設定介面主桯式:
+### Step 4: 執行設定介面主桯式:
 
 <code>python3 settings.py</code>
 
@@ -79,7 +112,7 @@ https://github.com/max32002/tixcraft_bot/issues/82#issuecomment-1878986084
 
 透過瀏覽器下載 github 上的 zip 檔, 在 Windows / macOS / Linux 平台, 預設的路徑在「下載」(~/Download) 的資料夾, 你在執行的 Terminal 視窗的路徑, 與你解壓縮的路徑可能不同, 直接執行上面的指令, 會無法進入到預期的資料夾內。
 
-Q: 取得source code後跑出來fatal: destination path 'tixcraft_bot' already exists and is not an empty directory.想問是什麼意思?
+### Q: 取得source code後跑出來fatal: destination path 'tixcraft_bot' already exists and is not an empty directory.想問是什麼意思?
 
 A: 執行 git clone 2次, 重覆取得 source code, 才會有這個問題, 如果 tixcraft_bot 目錄已經存在, 直接 cd tixcraft_bot 就可以了。
 如果你想把已下載的刪除, 可以直把把 tixcraft_bot 目錄刪掉即可。
@@ -96,16 +129,16 @@ PS：搶票程式可以多開chrome瀏覽器，如果你電腦效能高。
 
 PS：「掛機模式」的選項，指人不需要在電腦前，驗證碼會猜到對為止。
 
-Q: 是只有使用虛擬主機才要用程式碼執行搶票機器人嗎？
+### Q: 是只有使用虛擬主機才要用程式碼執行搶票機器人嗎？
 
 A: 除了 Window 有打包的執行檔之外, macOS / Linux 只能使用原始碼來執行, 當然 Windows 也可以用原始碼來執行.
 
 # File Description
 (檔案說明)
-* chrome_tixcraft.py : 搶票機器人主程式, 用來自動化網頁的操作。
-* config_launcher.py : 設定檔管理, 方便對多個設定檔案搶票。
-* kktix_status.py : kktix 售票狀態監控，可以在有票時提發出提醒。
+* chrome_tixcraft.py : 搶票機器人主程式，用來自動化網頁的操作，使用元件是selenium。
+* nodriver_tixcraft.py : 也是搶票機器人主程式，用來自動化網頁的操作，使用的元件是nodriver。
 * settings.py : 編輯 settings.json 的 GUI 介面。提供圖片OCR功能給chrome擴充功能。支援定時啟用/停用MaxBot。
+* config_launcher.py : 設定檔管理, 方便對多個設定檔案搶票。
 
 # Introduce the Implement 
 (實作方法)
@@ -127,12 +160,11 @@ please run this source code with high performance hardware computer and high spe
 https://github.com/sml2h3/ddddocr
 
 附註：
-* macOS 新的電腦 arm 系列, 暫時沒有提供自動輸入驗證碼功能, 使用上的限制和 ddddocr 相同. 暫時的解法是透過Rosetta來模擬 Intel CPU 環境. 請參考: https://github.com/max32002/tixcraft_bot/issues/82
-* macOS 舊款intel CPU 的電腦裡的 python 版本要降到低於等於 3.9版 或 3.10版, 例如:
+* 由於 ddddocr 元件的因素，python 版本要降到3.10.11版, 傳送門:
 https://www.python.org/downloads/release/python-31011/
 * 猜測驗證碼時比較容易出錯的是字英 f 和 t，還有 q 和 g, v 和 u 還有 w.
 
-想自動輸入驗證碼，可以參考看看：實作基於CNN的台鐵訂票驗證碼辨識以及透過模仿及資料增強的訓練集產生器 (Simple captcha solver based on CNN and a training set generator by imitating the style of captcha and data augmentation)
+想自動輸入驗證碼，除了可以使用 ddddocr 提供的 trainer, 也可以參考看看：實作基於CNN的台鐵訂票驗證碼辨識以及透過模仿及資料增強的訓練集產生器 (Simple captcha solver based on CNN and a training set generator by imitating the style of captcha and data augmentation)
 
 https://github.com/JasonLiTW/simple-railway-captcha-solver
 
@@ -179,18 +211,3 @@ https://github.com/JasonLiTW/simple-railway-captcha-solver
 * 特定的訂票網址, 自動置換為下一步的新網址。
 * 當訂票網頁內容已經無票或沒有符合的關鍵字時, 自動刷新網頁。
 * 特定網頁支援驗證碼功能, 需要同時開啟 MaxBot 主程式。
-
-# Supporting the Project 
-(贊助Max)
-
-如果這個項目對您有幫助，不妨請作者我喝杯咖啡 ：）
-
-## 目前支援的贊助方式：
-* 台灣的ATM匯款: 中國信託 (代碼：822) 帳號：071512949756
-* 7-11 ATM的無卡存款
-* 街口支付： 901643378
-* 悠遊付
-* PayPal： weng.32002@gmail.com
-* 支付寶: 13717075071
-
-詳細的圖文贊助教學如下： https://max-everyday.com/about/#donate

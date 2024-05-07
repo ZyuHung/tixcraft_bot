@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 #encoding=utf-8
-#執行方式：python chrome_tixcraft.py 或 python3 chrome_tixcraft.py
 import argparse
 import base64
 import json
@@ -22,6 +21,7 @@ import nodriver as uc
 from nodriver import cdp
 from nodriver.core.config import Config
 from urllib3.exceptions import InsecureRequestWarning
+import urllib.parse
 
 import util
 from NonBrowser import NonBrowser
@@ -32,7 +32,7 @@ except Exception as exc:
     print(exc)
     pass
 
-CONST_APP_VERSION = "MaxBot (2024.03.30)"
+CONST_APP_VERSION = "MaxBot (2024.04.15)"
 
 CONST_MAXBOT_ANSWER_ONLINE_FILE = "MAXBOT_ONLINE_ANSWER.txt"
 CONST_MAXBOT_CONFIG_FILE = "settings.json"
@@ -42,38 +42,40 @@ CONST_MAXBOT_LAST_URL_FILE = "MAXBOT_LAST_URL.txt"
 CONST_MAXBOT_QUESTION_FILE = "MAXBOT_QUESTION.txt"
 CONST_MAXBLOCK_EXTENSION_NAME = "Maxblockplus_1.0.0"
 CONST_MAXBLOCK_EXTENSION_FILTER =[
-"*google-analytics.com/*",
-"*googletagmanager.com/*",
-"*googletagservices.com/*",
-"*lndata.com/*",
+"*.doubleclick.net/*",
+"*.googlesyndication.com/*",
+"*.ssp.hinet.net/*",
 "*a.amnet.tw/*",
+"*anymind360.com/*",
 "*adx.c.appier.net/*",
+"*cdn.cookielaw.org/*",
+"*cdnjs.cloudflare.com/ajax/libs/clipboard.js/*",
 "*clarity.ms/*",
 "*cloudfront.com/*",
 "*cms.analytics.yahoo.com/*",
-"*doubleclick.net/*",
 "*e2elog.fetnet.net/*",
 "*fundingchoicesmessages.google.com/*",
 "*ghtinc.com/*",
+"*google-analytics.com/*",
+"*googletagmanager.com/*",
+"*googletagservices.com/*",
+"*img.uniicreative.com/*",
+"*lndata.com/*",
 "*match.adsrvr.org/*",
 "*onead.onevision.com.tw/*",
+"*play.google.com/log?*",
 "*popin.cc/*",
 "*rollbar.com/*",
 "*sb.scorecardresearch.com/*",
 "*tagtoo.co/*",
-"*.ssp.hinet.net/*",
 "*ticketmaster.sg/js/adblock*",
-"*.googlesyndication.com/*",
-"*treasuredata.com/*",
-"*play.google.com/log?*",
-"*www.youtube.com/youtubei/v1/player/heartbeat*",
-"*tixcraft.com/js/analytics.js*",
 "*ticketmaster.sg/js/adblock.js*",
-"*img.uniicreative.com/*",
-"*cdn.cookielaw.org/*",
-"*tixcraft.com/js/custom.js*",
+"*tixcraft.com/js/analytics.js*",
 "*tixcraft.com/js/common.js*",
-"*cdnjs.cloudflare.com/ajax/libs/clipboard.js/*"]
+"*tixcraft.com/js/custom.js*",
+"*treasuredata.com/*",
+"*www.youtube.com/youtubei/v1/player/heartbeat*",
+]
 
 CONST_CITYLINE_SIGN_IN_URL = "https://www.cityline.com/Login.html?targetUrl=https%3A%2F%2Fwww.cityline.com%2FEvents.html"
 CONST_FAMI_SIGN_IN_URL = "https://www.famiticket.com.tw/Home/User/SignIn"
@@ -109,9 +111,8 @@ def get_config_dict(args):
     config_filepath = os.path.join(app_root, CONST_MAXBOT_CONFIG_FILE)
 
     # allow assign config by command line.
-    if not args.input is None:
-        if len(args.input) > 0:
-            config_filepath = args.input
+    if args.input and len(args.input) > 0:
+        config_filepath = args.input
 
     config_dict = None
     if os.path.isfile(config_filepath):
@@ -119,48 +120,33 @@ def get_config_dict(args):
         with open(config_filepath) as json_data:
             config_dict = json.load(json_data)
 
-            if not args.headless is None:
-                config_dict["advanced"]["headless"] = util.t_or_f(args.headless)
+            # Define a dictionary to map argument names to their paths in the config_dict
+            arg_to_path = {
+                "headless": ["advanced", "headless"],
+                "homepage": ["homepage"],
+                "ticket_number": ["ticket_number"],
+                "browser": ["browser"],
+                "tixcraft_sid": ["advanced", "tixcraft_sid"],
+                "ibonqware": ["advanced", "ibonqware"],
+                "kktix_account": ["advanced", "kktix_account"],
+                "kktix_password": ["advanced", "kktix_password_plaintext"],
+                "proxy_server": ["advanced", "proxy_server_port"],
+                "window_size": ["advanced", "window_size"]
+            }
 
-            if not args.homepage is None:
-                if len(args.homepage) > 0:
-                    config_dict["homepage"] = args.homepage
-
-            if not args.ticket_number is None:
-                if args.ticket_number > 0:
-                    config_dict["ticket_number"] = args.ticket_number
-
-            if not args.browser is None:
-                if len(args.browser) > 0:
-                    config_dict["browser"] = args.browser
-
-            if not args.tixcraft_sid is None:
-                if len(args.tixcraft_sid) > 0:
-                    config_dict["advanced"]["tixcraft_sid"] = args.tixcraft_sid
-            if not args.ibonqware is None:
-                if len(args.ibonqware) > 0:
-                    config_dict["advanced"]["ibonqware"] = args.ibonqware
-
-            if not args.kktix_account is None:
-                if len(args.kktix_account) > 0:
-                    config_dict["advanced"]["kktix_account"] = args.kktix_account
-            if not args.kktix_password is None:
-                if len(args.kktix_password) > 0:
-                    config_dict["advanced"]["kktix_password_plaintext"] = args.kktix_password
-
-            if not args.proxy_server is None:
-                if len(args.proxy_server) > 2:
-                    config_dict["advanced"]["proxy_server_port"] = args.proxy_server
-
-            if not args.window_size is None:
-                if len(args.window_size) > 2:
-                    config_dict["advanced"]["window_size"] = args.window_size
+            # Update the config_dict based on the arguments
+            for arg, path in arg_to_path.items():
+                value = getattr(args, arg)
+                if value and len(str(value)) > 0:
+                    d = config_dict
+                    for key in path[:-1]:
+                        d = d[key]
+                    d[path[-1]] = value
 
             # special case for headless to enable away from keyboard mode.
             is_headless_enable_ocr = False
             if config_dict["advanced"]["headless"]:
                 # for tixcraft headless.
-                #print("If you are runnig headless mode on tixcraft, you need input your cookie SID.")
                 if len(config_dict["advanced"]["tixcraft_sid"]) > 1:
                     is_headless_enable_ocr = True
 
@@ -205,19 +191,18 @@ async def nodriver_press_button(tab, select_query):
             print(e)
             pass
 
-async def nodriver_check_checkbox(tab, select_query, value='true'):
-    is_checkbox_checked = False
+from typing import Optional
+
+async def nodriver_check_checkbox(tab: Optional[object], select_query: str, value: str = 'true') -> bool:
     if tab:
         try:
             element = await tab.query_selector(select_query)
             if element:
-                await element.apply('function (element) { element.checked='+ value +'; } ')
-                is_checkbox_checked = True
+                await element.click()
+                return True
         except Exception as exc:
-            #print("check checkbox fail for selector:", select_query)
             print(exc)
-            pass
-    return is_checkbox_checked
+    return False
 
 async def nodriver_facebook_login(tab, facebook_account, facebook_password):
     if tab:
@@ -265,14 +250,12 @@ async def nodriver_kktix_signin(tab, url, config_dict):
             print(e)
             pass
 
-async def nodriver_kktix_paused_main(tab, url, config_dict, kktix_dict):
+async def nodriver_kktix_paused_main(tab, url, config_dict):
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if '/users/sign_in?' in url:
         await nodriver_kktix_signin(tab, url, config_dict)
         is_url_contain_sign_in = True
-
-    return kktix_dict
 
 async def nodriver_goto_homepage(driver, config_dict):
     homepage = config_dict["homepage"]
@@ -280,6 +263,7 @@ async def nodriver_goto_homepage(driver, config_dict):
         # for like human.
         try:
             tab = await driver.get(homepage)
+            await tab.get_content()
             time.sleep(5)
         except Exception as e:
             pass
@@ -319,6 +303,7 @@ async def nodriver_goto_homepage(driver, config_dict):
 
     try:
         tab = await driver.get(homepage)
+        await tab.get_content()
         time.sleep(3)
     except Exception as e:
         pass
@@ -379,7 +364,7 @@ async def nodriver_kktix_travel_price_list(tab, config_dict, kktix_area_auto_sel
 
     ticket_price_list = None
     try:
-        ticket_price_list = await tab.select_all('div.display-table-row')
+        ticket_price_list = await tab.query_selector_all('div.display-table-row')
     except Exception as exc:
         ticket_price_list = None
         print("find ticket-price Exception:")
@@ -419,13 +404,15 @@ async def nodriver_kktix_travel_price_list(tab, config_dict, kktix_area_auto_sel
             row_input = None
             current_ticket_number = "0"
             try:
-                js_attr = await row.get_js_attributes()
-                row_html = js_attr["innerHTML"]
-                row_text = js_attr["innerText"]
+                #js_attr = await row.get_js_attributes()
+                row_html = await row.get_html()
+                row_text = util.remove_html_tags(row_html)
+
                 row_input = await row.query_selector("input")
-                if not row_input is None:
+                if row_input:
                     js_attr_input = await row_input.get_js_attributes()
-                    current_ticket_number = js_attr_input["value"]
+                    if js_attr_input:
+                        current_ticket_number = js_attr_input["value"]
             except Exception as exc:
                 is_dom_ready = False
                 if show_debug_message:
@@ -591,29 +578,26 @@ async def nodriver_kktix_assign_ticket_number(tab, config_dict, kktix_area_keywo
     if not target_area is None:
         current_ticket_number = ""
         if show_debug_message:
-            print("try to get input box value.")
+            print("try to set input box value.")
         try:
-            current_ticket_number = str(target_area.attribute('value')).strip()
+            current_ticket_number = await target_area.apply('function (element) { return element.value; } ')
         except Exception as exc:
             pass
+
+        if show_debug_message:
+            print("current_ticket_number", current_ticket_number)
 
         if len(current_ticket_number) > 0:
             if current_ticket_number == "0":
                 try:
                     print("asssign ticket number:%s" % ticket_number_str)
-                    target_area.clear_input()
-                    target_area.send_keys(ticket_number_str)
+                    await target_area.click()
+                    await target_area.apply('function (element) {element.value = ""; } ')
+                    await target_area.send_keys(ticket_number_str);
                     is_ticket_number_assigned = True
                 except Exception as exc:
                     print("asssign ticket number to ticket-price field Exception:")
                     print(exc)
-                    try:
-                        target_area.clear()
-                        target_area.send_keys("1")
-                        is_ticket_number_assigned = True
-                    except Exception as exc2:
-                        print("asssign ticket number to ticket-price still failed.")
-                        pass
             else:
                 if show_debug_message:
                     print("value already assigned.")
@@ -651,6 +635,9 @@ async def nodriver_kktix_reg_captcha(tab, config_dict, fail_list, registrationsN
                 inferred_answer_string = answer_item
                 break
 
+        if len(answer_list) > 0:
+            answer_list = list(dict.fromkeys(answer_list))
+
         if show_debug_message:
             print("inferred_answer_string:", inferred_answer_string)
             print("question_text:", question_text)
@@ -658,18 +645,28 @@ async def nodriver_kktix_reg_captcha(tab, config_dict, fail_list, registrationsN
             print("fail_list:", fail_list)
 
         # PS: auto-focus() when empty inferred_answer_string with empty inputed text value.
-        input_text_css = 'div.custom-captcha-inner > div > div > input'
-        next_step_button_css = ''
-        submit_by_enter = False
-        check_input_interval = 0.2
-        #is_answer_sent, fail_list = fill_common_verify_form(tab, config_dict, inferred_answer_string, fail_list, input_text_css, next_step_button_css, submit_by_enter, check_input_interval)
-        if len(answer_list) > 0:
-            input_text = await tab.query_selector(input_text_css)
-            if not input_text is None:
-                await input_text.send_keys(answer_list[0])
+        if len(inferred_answer_string) > 0:
+            input_text_css = 'div.custom-captcha-inner > div > div > input'
+            next_step_button_css = ''
+            submit_by_enter = False
+            check_input_interval = 0.2
+            #is_answer_sent, fail_list = fill_common_verify_form(tab, config_dict, inferred_answer_string, fail_list, input_text_css, next_step_button_css, submit_by_enter, check_input_interval)
+            if len(answer_list) > 0:
+                input_text = await tab.query_selector(input_text_css)
+                if not input_text is None:
 
-                # due multi next buttons(pick seats/best seats)
-                await nodriver_kktix_press_next_button(tab)
+                    await input_text.click()
+                    await input_text.apply('function (element) {element.value = ""; } ')
+                    await input_text.send_keys(inferred_answer_string)
+                    time.sleep(0.1)
+
+                    # due multi next buttons(pick seats/best seats)
+                    print("click")
+                    await nodriver_kktix_press_next_button(tab)
+                    time.sleep(0.75)
+
+                    fail_list.append(inferred_answer_string)
+
 
     return fail_list, is_question_popup
 
@@ -680,7 +677,7 @@ async def nodriver_kktix_press_next_button(tab):
     css_select = "div.register-new-next-button-area > button"
     but_button_list = None
     try:
-        but_button_list = await tab.select_all(css_select)
+        but_button_list = await tab.query_selector_all(css_select)
     except Exception as exc:
         print(exc)
         pass
@@ -692,6 +689,7 @@ async def nodriver_kktix_press_next_button(tab):
             try:
                 #print("click on last button")
                 await but_button_list[button_count-1].click()
+                time.sleep(0.3)
                 ret = True
             except Exception as exc:
                 print(exc)
@@ -735,7 +733,7 @@ async def nodriver_kktix_reg_new_main(tab, config_dict, fail_list, played_sound_
             is_need_refresh_final = True
 
             for area_keyword_item in area_keyword_array:
-                is_need_refresh_tmp = Falses
+                is_need_refresh_tmp = False
                 is_dom_ready, is_ticket_number_assigned, is_need_refresh_tmp = await nodriver_kktix_assign_ticket_number(tab, config_dict, area_keyword_item)
 
                 if not is_dom_ready:
@@ -768,6 +766,8 @@ async def nodriver_kktix_reg_new_main(tab, config_dict, fail_list, played_sound_
                         play_sound_while_ordering(config_dict)
                     played_sound_ticket = True
 
+                is_finish_checkbox_click = await nodriver_check_checkbox(tab, 'input[type="checkbox"]:not(:checked)')
+
                 # whole event question.
                 fail_list, is_question_popup = await nodriver_kktix_reg_captcha(tab, config_dict, fail_list, registrationsNewApp_div)
 
@@ -777,6 +777,29 @@ async def nodriver_kktix_reg_new_main(tab, config_dict, fail_list, played_sound_
                     control_text = await nodriver_get_text_by_selector(tab, 'div > div.code-input > div.control-group > label.control-label', 'innerText')
                     if show_debug_message:
                         print("control_text:", control_text)
+
+                    if len(control_text) > 0:
+                        input_text_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > input[type="text"]'
+                        input_text_element = None
+                        try:
+                            input_text_element = await tab.query_selector(input_text_css)
+                        except Exception as exc:
+                            #print(exc)
+                            pass
+                        if input_text_element is None:
+                            radio_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > input[type="radio"]'
+                            try:
+                                radio_element = await tab.query_selector(radio_css)
+                                if radio_element:
+                                    print("found radio")
+                                    joined_button_css = 'div > div.code-input > div.control-group > div.controls > label[ng-if] > span[ng-if] > a[ng-href="#"]'
+                                    joined_element = await tab.query_selector(joined_button_css)
+                                    if joined_element:
+                                        control_text = ""
+                                        print("member joined")
+                            except Exception as exc:
+                                print(exc)
+                                pass
 
                     if len(control_text) == 0:
                         click_ret = await nodriver_kktix_press_next_button(tab)
@@ -813,7 +836,18 @@ async def nodriver_kktix_reg_new_main(tab, config_dict, fail_list, played_sound_
 
     return fail_list, played_sound_ticket
 
-async def nodriver_kktix_main(tab, url, config_dict, kktix_dict):
+async def nodriver_kktix_main(tab, url, config_dict):
+    global kktix_dict
+    if not 'kktix_dict' in globals():
+        kktix_dict = {}
+        kktix_dict["fail_list"]=[]
+        kktix_dict["start_time"]=None
+        kktix_dict["done_time"]=None
+        kktix_dict["elapsed_time"]=None
+        kktix_dict["is_popup_checkout"] = False
+        kktix_dict["played_sound_ticket"] = False
+        kktix_dict["played_sound_order"] = False
+
     is_url_contain_sign_in = False
     # fix https://kktix.com/users/sign_in?back_to=https://kktix.com/events/xxxx and registerStatus: SOLD_OUT cause page refresh.
     if '/users/sign_in?' in url:
@@ -942,7 +976,7 @@ async def nodriver_kktix_main(tab, url, config_dict, kktix_dict):
         kktix_dict["is_popup_checkout"] = False
         kktix_dict["played_sound_order"] = False
 
-    return kktix_dict, is_quit_bot
+    return is_quit_bot
 
 async def nodriver_tixcraft_home_close_window(tab):
     accept_all_cookies_btn = None
@@ -959,9 +993,12 @@ async def nodriver_get_text_by_selector(tab, my_css_selector, attribute='innerHT
     try:
         div_element = await tab.query_selector(my_css_selector)
         if div_element:
-            js_attr = await div_element.get_js_attributes()
-            if js_attr:
-                div_text = js_attr[attribute]
+            #js_attr = await div_element.get_js_attributes()
+            div_text = await div_element.get_html()
+            
+            # only this case to remove tags
+            if attribute=="innerText":
+                div_text = util.remove_html_tags(div_text)
     except Exception as exc:
         print("find verify textbox fail")
         pass
@@ -1032,7 +1069,7 @@ async def nodriver_tixcraft_input_check_code(tab, config_dict, fail_list, questi
 
 async def nodriver_tixcraft_ticket_main_agree(tab, config_dict):
     for i in range(3):
-        is_finish_checkbox_click = await nodriver_check_checkbox(tab, '#TicketForm_agree')
+        is_finish_checkbox_click = await nodriver_check_checkbox(tab, '#TicketForm_agree:not(:checked)')
         if is_finish_checkbox_click:
             break
 
@@ -1050,7 +1087,20 @@ async def nodriver_tixcraft_ticket_main(tab, config_dict, ocr, Captcha_Browser, 
         await nodriver_tixcraft_ticket_main_agree(tab, config_dict)
 
 
-async def nodriver_tixcraft_main(tab, url, config_dict, tixcraft_dict, ocr, Captcha_Browser):
+async def nodriver_tixcraft_main(tab, url, config_dict, ocr, Captcha_Browser):
+    global tixcraft_dict
+    if not 'tixcraft_dict' in globals():
+        tixcraft_dict = {}
+        tixcraft_dict["fail_list"]=[]
+        tixcraft_dict["fail_promo_list"]=[]
+        tixcraft_dict["start_time"]=None
+        tixcraft_dict["done_time"]=None
+        tixcraft_dict["elapsed_time"]=None
+        tixcraft_dict["is_popup_checkout"] = False
+        tixcraft_dict["area_retry_count"]=0
+        tixcraft_dict["played_sound_ticket"] = False
+        tixcraft_dict["played_sound_order"] = False
+
     await nodriver_tixcraft_home_close_window(tab)
 
     # special case for same event re-open, redirect to user's homepage.
@@ -1166,7 +1216,7 @@ async def nodriver_tixcraft_main(tab, url, config_dict, tixcraft_dict, ocr, Capt
         tixcraft_dict["is_popup_checkout"] = False
         tixcraft_dict["played_sound_order"] = False
 
-    return tixcraft_dict, is_quit_bot
+    return is_quit_bot
 
 async def nodriver_ticketplus_account_sign_in(tab, config_dict):
     print("nodriver_ticketplus_account_sign_in")
@@ -1296,7 +1346,13 @@ async def nodriver_ticketplus_account_auto_fill(tab, config_dict):
 
     return is_user_signin
 
-async def nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser, ticketplus_dict):
+async def nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser):
+    global ticketplus_dict
+    if not 'ticketplus_dict' in globals():
+        ticketplus_dict = {}
+        ticketplus_dict["fail_list"]=[]
+        ticketplus_dict["is_popup_confirm"] = False
+
     home_url = 'https://ticketplus.com.tw/'
     is_user_signin = False
     if home_url == url.lower():
@@ -1304,8 +1360,8 @@ async def nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser, 
             domain_name = url.split('/')[2]
             if not Captcha_Browser is None:
                 # TODO:
-                #Captcha_Browser.Set_cookies(driver.get_cookies())
-                Captcha_Browser.Set_Domain(domain_name)
+                #Captcha_Browser.set_cookies(driver.get_cookies())
+                Captcha_Browser.set_domain(domain_name)
 
         is_user_signin = await nodriver_ticketplus_account_auto_fill(tab, config_dict)
 
@@ -1389,15 +1445,21 @@ async def nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser, 
     else:
         ticketplus_dict["is_popup_confirm"] = False
 
-    return ticketplus_dict
-
 async def nodriver_ibon_ticket_agree(tab):
     for i in range(3):
-        is_finish_checkbox_click = await nodriver_check_checkbox(tab, '#agreen')
+        is_finish_checkbox_click = await nodriver_check_checkbox(tab, '#agreen:not(:checked)')
         if is_finish_checkbox_click:
             break
 
-async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Browser):
+async def nodriver_ibon_main(tab, url, config_dict, ocr, Captcha_Browser):
+    global ibon_dict
+    if not 'ibon_dict' in globals():
+        ibon_dict = {}
+        ibon_dict["fail_list"]=[]
+        ibon_dict["start_time"]=None
+        ibon_dict["done_time"]=None
+        ibon_dict["elapsed_time"]=None
+
     home_url_list = ['https://ticket.ibon.com.tw/'
     ,'https://ticket.ibon.com.tw/index/entertainment'
     ]
@@ -1416,7 +1478,7 @@ async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Brow
             is_event_page = True
         if is_event_page:
             # ibon auto press signup
-            await nodriver_press_button('.btn.btn-signup')
+            await nodriver_press_button(tab, '.btn.btn-signup')
 
     is_match_target_feature = False
 
@@ -1495,7 +1557,7 @@ async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Brow
 
                 if 'PRODUCT_ID=' in url.upper():
                     # step 1: select area.
-                    is_match_target_feature = True
+                    is_price_assign_by_bot = False
                     # TODO:
                     #is_price_assign_by_bot = ibon_performance(driver, config_dict)
 
@@ -1513,8 +1575,7 @@ async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Brow
                 if is_do_ibon_performance_with_ticket_number:
                     if config_dict["advanced"]["disable_adjacent_seat"]:
                         # TODO:
-                        #is_finish_checkbox_click = ibon_allow_not_adjacent_seat(driver, config_dict)
-                        pass
+                        is_finish_checkbox_click = await nodriver_check_checkbox(tab, '.asp-checkbox > input[type="checkbox"]:not(:checked)')
 
                     # captcha
                     is_captcha_sent = False
@@ -1526,7 +1587,7 @@ async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Brow
                         captcha_url = '/pic.aspx?TYPE=%s' % (model_name)
                         #PS: need set cookies once, if user change domain.
                         if not Captcha_Browser is None:
-                            Captcha_Browser.Set_Domain(domain_name, captcha_url=captcha_url)
+                            Captcha_Browser.set_domain(domain_name, captcha_url=captcha_url)
 
                         # TODO:
                         #is_captcha_sent = ibon_captcha(driver, config_dict, ocr, Captcha_Browser, model_name)
@@ -1595,23 +1656,19 @@ async def nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Brow
 
                     if not is_name_based:
                         is_button_clicked = await nodriver_press_button(tab, 'a.btn.btn-pink.continue')
-    return ibon_dict
 
 
-async def nodriver_cityline_auto_retry_access(tab, url):
+async def nodriver_cityline_auto_retry_access(tab, url, config_dict):
     try:
-        btn_retry = await tab.query_selector('button')
-        if btn_retry:
-            btn_retry.click()
+        js = "goEvent();"
+        await tab.evaluate(js)
     except Exception as exc:
         print(exc)
         pass
 
     # 刷太快, 會被封IP?
-    # must wait...
+    # must wait...? no need to wait.
     auto_reload_page_interval = config_dict["advanced"]["auto_reload_page_interval"]
-    if auto_reload_page_interval <= 0.2:
-        auto_reload_page_interval = 0.2
     if auto_reload_page_interval > 0:
         time.sleep(auto_reload_page_interval)
 
@@ -1653,20 +1710,186 @@ async def nodriver_cityline_login(tab, cityline_account):
             print(exc)
             pass
 
+async def nodriver_cityline_date_auto_select(tab, auto_select_mode, date_keyword):
+    show_debug_message = True       # debug.
+    show_debug_message = False      # online
+
+    ret = False
+
+    area_list = None
+    try:
+        my_css_selector = "button.date-time-position"
+        area_list = await tab.query_selector_all(my_css_selector)
+    except Exception as exc:
+        #print(exc)
+        pass
+
+    matched_blocks = None
+    if area_list:
+        formated_area_list = None
+        area_list_count = len(area_list)
+        if show_debug_message:
+            print("date_list_count:", area_list_count)
+
+        if area_list_count > 0:
+            formated_area_list = area_list
+            if show_debug_message:
+                print("formated_area_list count:", len(formated_area_list))
+
+            if len(date_keyword) == 0:
+                matched_blocks = formated_area_list
+            else:
+                # match keyword.
+                if show_debug_message:
+                    print("start to match keyword:", date_keyword)
+                matched_blocks = []
+
+                for row in formated_area_list:
+                    row_text = ""
+                    row_html = ""
+                    try:
+                        row_html = await row.get_html()
+                        row_text = util.remove_html_tags(row_html)
+                        # PS: get_js_attributes on cityline due to: the JSON object must be str, bytes or bytearray, not NoneType
+                        #js_attr = await row.get_js_attributes()
+                        #row_html = js_attr["innerHTML"]
+                        #row_text = js_attr["innerText"]
+                    except Exception as exc:
+                        if show_debug_message:
+                            print(exc)
+                        # error, exit loop
+                        break
+
+                    if len(row_text) > 0:
+                        if show_debug_message:
+                            print("row_text:", row_text)
+                        is_match_area = util.is_row_match_keyword(date_keyword, row_text)
+                        if is_match_area:
+                            matched_blocks.append(row)
+                            if auto_select_mode == CONST_FROM_TOP_TO_BOTTOM:
+                                break
+
+                if show_debug_message:
+                    if not matched_blocks is None:
+                        print("after match keyword, found count:", len(matched_blocks))
+        else:
+            print("not found date-time-position")
+            pass
+    else:
+        #print("date date-time-position is None")
+        pass
+
+    target_area = util.get_target_item_from_matched_list(matched_blocks, auto_select_mode)
+    if not target_area is None:
+        try:
+            await target_area.scroll_into_view()
+            await target_area.click()
+            ret = True
+        except Exception as exc:
+            print(exc)
+
+    return ret
+
+async def nodriver_check_modal_dialog_popup(tab):
+    ret = False
+    try:
+        el_div = tab.query_selector('div.modal-dialog > div.modal-content')
+        if el_div:
+            ret = True
+    except Exception as exc:
+        print(exc)
+        pass
+    return ret
+
+async def nodriver_cityline_purchase_button_press(tab, config_dict):
+    date_auto_select_mode = config_dict["date_auto_select"]["mode"]
+    date_keyword = config_dict["date_auto_select"]["date_keyword"].strip()
+    is_date_assign_by_bot = await nodriver_cityline_date_auto_select(tab, date_auto_select_mode, date_keyword)
+
+    is_button_clicked = False
+    if is_date_assign_by_bot:
+        print("press purchase button")
+        await nodriver_press_button(tab, 'button.purchase-btn')
+        is_button_clicked = True
+        # wait reCAPTCHA popup.
+        time.sleep(6)
+
+    return is_button_clicked
+
+async def nodriver_cityline_close_second_tab(tab, url):
+    new_tab = tab
+    #print("tab count:", len(tab.browser.tabs))
+    if len(tab.browser.tabs) > 1:
+        # wait page ready.
+        time.sleep(0.3)
+        for tmp_tab in tab.browser.tabs:
+            if tmp_tab != tab:
+                tmp_url, is_quit_bot = await nodriver_current_url(tmp_tab)
+                if len(tmp_url) > 0:
+                    if tmp_url[:5] == "https":
+                        await new_tab.activate()
+                        await tab.close()
+                        time.sleep(0.3)
+                        new_tab = tmp_tab
+                        break
+    return new_tab
 
 async def nodriver_cityline_main(tab, url, config_dict):
+    global cityline_dict
+    if not 'cityline_dict' in globals():
+        cityline_dict = {}
+        cityline_dict["played_sound_ticket"] = False
+
     if 'msg.cityline.com' in url or 'event.cityline.com' in url:
-        await nodriver_cityline_auto_retry_access(tab, url)
+        is_dom_ready = False
+        try:
+            html_body = await tab.get_content()
+            if html_body:
+                if len(html_body) > 10240:
+                    is_dom_ready = True
+        except Exception as exc:
+            pass
+        if is_dom_ready:
+            #await nodriver_cityline_auto_retry_access(tab, url, config_dict)
+            pass
 
     if 'cityline.com/Login.html' in url:
         cityline_account = config_dict["advanced"]["cityline_account"]
         if len(cityline_account) > 4:
             await nodriver_cityline_login(tab, cityline_account)
 
-    # main page:
+    tab = await nodriver_cityline_close_second_tab(tab, url)
+
+    # date page.
+    #https://venue.cityline.com/utsvInternet/EVENT_NAME/eventDetail?event=EVENT_CODE
+    global cityline_purchase_button_pressed
+    if not 'cityline_purchase_button_pressed' in globals():
+        cityline_purchase_button_pressed = False
+    if '/eventDetail?' in url:
+        # detect fail.
+        #is_modal_dialog_popup = await nodriver_check_modal_dialog_popup(tab)
+
+        if not cityline_purchase_button_pressed:
+            if config_dict["date_auto_select"]["enable"]:
+                is_button_clicked = await nodriver_cityline_purchase_button_press(tab, config_dict)
+                if is_button_clicked:
+                    cityline_purchase_button_pressed = True
+    else:
+        cityline_purchase_button_pressed = False
+
+
+    # area page:
     # TODO:
     #https://venue.cityline.com/utsvInternet/EVENT_NAME/performance?event=EVENT_CODE&perfId=PROFORMANCE_ID
-    pass
+    if 'venue.cityline.com' in url and '/performance?':
+        if config_dict["advanced"]["play_sound"]["ticket"]:
+            if not cityline_dict["played_sound_ticket"]:
+                play_sound_while_ordering(config_dict)
+            cityline_dict["played_sound_ticket"] = True
+    else:
+        cityline_dict["played_sound_ticket"] = False
+
+    return tab
 
 
 async def nodriver_facebook_main(tab, config_dict):
@@ -1729,16 +1952,14 @@ def get_nodriver_browser_args():
     ]
     return browser_args
 
-def get_maxbot_plus_extension_path():
-    extension_path = "webdriver/Maxbotplus_1.0.0/"
-    if platform.system() == 'Windows':
-        extension_path = extension_path.replace("/","\\")
-
+def get_maxbot_extension_path(extension_folder):
     app_root = util.get_app_root()
+    extension_path = "webdriver"
+    extension_path = os.path.join(extension_path, extension_folder)
     config_filepath = os.path.join(app_root, extension_path)
     #print("config_filepath:", config_filepath)
 
-    # check extesion mainfest
+    # double check extesion mainfest
     path = pathlib.Path(config_filepath)
     if path.exists():
         if path.is_dir():
@@ -1746,27 +1967,6 @@ def get_maxbot_plus_extension_path():
             for item in path.rglob("manifest.*"):
                 path = item.parent
             #print("final path:", path)
-
-    return config_filepath
-
-def get_maxbot_block_extension_path():
-    extension_path = "webdriver/Maxblockplus_1.0.0/"
-    if platform.system() == 'Windows':
-        extension_path = extension_path.replace("/","\\")
-
-    app_root = util.get_app_root()
-    config_filepath = os.path.join(app_root, extension_path)
-    #print("config_filepath:", config_filepath)
-
-    # check extesion mainfest
-    path = pathlib.Path(config_filepath)
-    if path.exists():
-        if path.is_dir():
-            #print("found extension dir")
-            for item in path.rglob("manifest.*"):
-                path = item.parent
-            #print("final path:", path)
-
     return config_filepath
 
 def get_extension_config(config_dict):
@@ -1777,32 +1977,42 @@ def get_extension_config(config_dict):
         browser_args.append('--proxy-server=%s' % config_dict["advanced"]["proxy_server_port"])
     conf = Config(browser_args=browser_args, lang=default_lang, no_sandbox=no_sandbox, headless=config_dict["advanced"]["headless"])
     if config_dict["advanced"]["chrome_extension"]:
-        conf.add_extension(get_maxbot_plus_extension_path())
-        conf.add_extension(get_maxbot_block_extension_path())
+        ext = get_maxbot_extension_path(CONST_MAXBOT_EXTENSION_NAME)
+        if len(ext) > 0:
+            conf.add_extension(ext)
+            util.dump_settings_to_maxbot_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG_FILE)
+        ext = get_maxbot_extension_path(CONST_MAXBLOCK_EXTENSION_NAME)
+        if len(ext) > 0:
+            conf.add_extension(ext)
+            util.dump_settings_to_maxblock_plus_extension(ext, config_dict, CONST_MAXBOT_CONFIG_FILE, CONST_MAXBLOCK_EXTENSION_FILTER)
     return conf
 
 async def nodrver_block_urls(tab, config_dict):
-    NETWORK_BLOCKED_URLS = ['*/adblock.js'
-    ,'*/google_ad_block.js'
-    ,'*google-analytics.*'
-    ,'*googletagmanager.*'
-    ,'*googletagservices.*'
-    ,'*googlesyndication.*'
-    ,'*play.google.com/*'
-    ,'*cdn.cookielaw.org/*'
-    ,'*fundingchoicesmessages.google.com/*'
-    ,'*.doubleclick.net/*'
-    ,'*.rollbar.com/*'
-    ,'*.cloudfront.com/*'
-    ,'*.lndata.com/*'
-    ,'*.twitter.com/i/*'
-    ,'*platform.twitter.com/*'
-    ,'*syndication.twitter.com/*'
-    ,'*youtube.com/*'
-    ,'*player.youku.*'
-    ,'*.clarity.ms/*'
-    ,'*img.uniicreative.com/*'
-    ,'*e2elog.fetnet.net*']
+    NETWORK_BLOCKED_URLS = [
+        '*.clarity.ms/*',
+        '*.cloudfront.com/*',
+        '*.doubleclick.net/*',
+        '*.lndata.com/*',
+        '*.rollbar.com/*',
+        '*.twitter.com/i/*',
+        '*/adblock.js',
+        '*/google_ad_block.js',
+        '*cityline.com/js/others.min.js',
+        '*anymind360.com/*',
+        '*cdn.cookielaw.org/*',
+        '*e2elog.fetnet.net*',
+        '*fundingchoicesmessages.google.com/*',
+        '*google-analytics.*',
+        '*googlesyndication.*',
+        '*googletagmanager.*',
+        '*googletagservices.*',
+        '*img.uniicreative.com/*',
+        '*platform.twitter.com/*',
+        '*play.google.com/*',
+        '*player.youku.*',
+        '*syndication.twitter.com/*',
+        '*youtube.com/*',
+    ]
 
     if config_dict["advanced"]["hide_some_image"]:
         NETWORK_BLOCKED_URLS.append('*.woff')
@@ -1906,7 +2116,7 @@ def nodriver_overwrite_prefs(conf):
     prefs_dict["privacy_sandbox"]={}
     prefs_dict["privacy_sandbox"]["first_party_sets_enabled"]=False
     prefs_dict["profile"]={}
-    prefs_dict["profile"]["cookie_controls_mode"]=1
+    #prefs_dict["profile"]["cookie_controls_mode"]=1
     prefs_dict["profile"]["default_content_setting_values"]={}
     prefs_dict["profile"]["default_content_setting_values"]["notifications"]=2
     prefs_dict["profile"]["default_content_setting_values"]["sound"]=2
@@ -1929,8 +2139,10 @@ def nodriver_overwrite_prefs(conf):
     state_dict["performance_tuning"]["high_efficiency_mode"]["state"]=1
     state_dict["browser"]={}
     state_dict["browser"]["enabled_labs_experiments"]=[
+        "history-journeys@4",
         "memory-saver-multi-state-mode@1",
-        "modal-memory-saver@1"
+        "modal-memory-saver@1",
+        "read-anything@2"
     ]
     state_dict["dns_over_https"]={}
     state_dict["dns_over_https"]["mode"]="off"
@@ -1968,41 +2180,9 @@ async def main(args):
     url = ""
     last_url = ""
 
-    # for tixcraft
-    tixcraft_dict = {}
-    tixcraft_dict["fail_list"]=[]
-    tixcraft_dict["fail_promo_list"]=[]
-    tixcraft_dict["start_time"]=None
-    tixcraft_dict["done_time"]=None
-    tixcraft_dict["elapsed_time"]=None
-    tixcraft_dict["is_popup_checkout"] = False
-    tixcraft_dict["area_retry_count"]=0
-    tixcraft_dict["played_sound_ticket"] = False
-    tixcraft_dict["played_sound_order"] = False
-
-    # for kktix
-    kktix_dict = {}
-    kktix_dict["fail_list"]=[]
-    kktix_dict["start_time"]=None
-    kktix_dict["done_time"]=None
-    kktix_dict["elapsed_time"]=None
-    kktix_dict["is_popup_checkout"] = False
-    kktix_dict["played_sound_ticket"] = False
-    kktix_dict["played_sound_order"] = False
-
     fami_dict = {}
     fami_dict["fail_list"] = []
     fami_dict["last_activity"]=""
-
-    ibon_dict = {}
-    ibon_dict["fail_list"]=[]
-    ibon_dict["start_time"]=None
-    ibon_dict["done_time"]=None
-    ibon_dict["elapsed_time"]=None
-
-    hkticketing_dict = {}
-    hkticketing_dict["is_date_submiting"] = False
-    hkticketing_dict["fail_list"]=[]
 
     ticketplus_dict = {}
     ticketplus_dict["fail_list"]=[]
@@ -2033,6 +2213,7 @@ async def main(args):
 
         if not is_quit_bot:
             url, is_quit_bot = await nodriver_current_url(tab)
+            #print("url:", url)
 
         if is_quit_bot:
             try:
@@ -2062,14 +2243,14 @@ async def main(args):
 
         if is_maxbot_paused:
             if 'kktix.c' in url:
-                kktix_dict = await nodriver_kktix_paused_main(tab, url, config_dict, kktix_dict)
+                await nodriver_kktix_paused_main(tab, url, config_dict)
             # sleep more when paused.
             time.sleep(0.1)
             continue
 
         # for kktix.cc and kktix.com
         if 'kktix.c' in url:
-            kktix_dict, is_quit_bot = await nodriver_kktix_main(tab, url, config_dict, kktix_dict)
+            is_quit_bot = await nodriver_kktix_main(tab, url, config_dict)
             pass
 
         tixcraft_family = False
@@ -2083,16 +2264,14 @@ async def main(args):
             tixcraft_family = True
 
         if tixcraft_family:
-            tixcraft_dict, is_quit_bot = await nodriver_tixcraft_main(tab, url, config_dict, tixcraft_dict, ocr, Captcha_Browser)
-            pass
+            is_quit_bot = await nodriver_tixcraft_main(tab, url, config_dict, ocr, Captcha_Browser)
 
         if 'famiticket.com' in url:
             #fami_dict = famiticket_main(driver, url, config_dict, fami_dict)
             pass
 
         if 'ibon.com' in url:
-            ibon_dict = await nodriver_ibon_main(tab, url, config_dict, ibon_dict, ocr, Captcha_Browser)
-            pass
+            await nodriver_ibon_main(tab, url, config_dict, ocr, Captcha_Browser)
 
         kham_family = False
         if 'kham.com.tw' in url:
@@ -2109,16 +2288,14 @@ async def main(args):
             pass
 
         if 'ticketplus.com' in url:
-            ticketplus_dict = await nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser, ticketplus_dict)
-            pass
+            await nodriver_ticketplus_main(tab, url, config_dict, ocr, Captcha_Browser)
 
         if 'urbtix.hk' in url:
             #urbtix_main(driver, url, config_dict)
             pass
 
         if 'cityline.com' in url:
-            await nodriver_cityline_main(tab, url, config_dict)
-            pass
+            tab = await nodriver_cityline_main(tab, url, config_dict)
 
         softix_family = False
         if 'hkticketing.com' in url:
@@ -2128,7 +2305,7 @@ async def main(args):
         if 'ticketek.com' in url:
             softix_family = True
         if softix_family:
-            #hkticketing_dict = softix_powerweb_main(driver, url, config_dict, hkticketing_dict)
+            #softix_powerweb_main(driver, url, config_dict)
             pass
 
         # for facebook
