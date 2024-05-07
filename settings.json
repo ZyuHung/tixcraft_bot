@@ -1,5 +1,5 @@
 {
-    "homepage": "about:blank",
+    "homepage": "https://tixcraft.com",
     "browser": "chrome",
     "language": "English",
     "ticket_number": 2,
@@ -40,7 +40,7 @@
             "order": true,
             "filename": "ding-dong.wav"
         },
-        "tixcraft_sid": "fCp/YHsgZ2Z/YSd2YCF3IHV9YXxze3hhJSI=",
+        "tixcraft_sid": "nom73pi6hb77ps31923oub737n",
         "ibonqware": "",
         "facebook_account": "",
         "kktix_account": "",
@@ -74,8 +74,8 @@
         "ticketplus_password_plaintext": "",
         "chrome_extension": true,
         "disable_adjacent_seat": false,
-        "hide_some_image": false,
-        "block_facebook_network": false,
+        "hide_some_image": true,
+        "block_facebook_network": true,
         "headless": false,
         "verbose": false,
         "auto_guess_options": true,

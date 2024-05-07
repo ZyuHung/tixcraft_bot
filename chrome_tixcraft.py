@@ -9619,7 +9619,7 @@ def ticketplus_assign_ticket_number(target_area, config_dict):
     return is_price_assign_by_bot
 
 def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_item, current_layout_style):
-    show_debug_message = True       # debug.
+    # show_debug_message = True       # debug.
     show_debug_message = False      # online
 
     if config_dict["advanced"]["verbose"]:
@@ -9671,6 +9671,7 @@ def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_ite
             print("find .text-title date list fail")
 
     formated_area_list = None
+    print("area_list", area_list)
     if not area_list is None:
         area_list_count = len(area_list)
         if show_debug_message:
@@ -9733,6 +9734,7 @@ def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_ite
                     print("soldout_count:", soldout_count)
                 if area_list_count == soldout_count:
                     formated_area_list = None
+                    print("soldout", is_need_refresh)
                     is_need_refresh = True
         else:
             if show_debug_message:
@@ -9781,6 +9783,7 @@ def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_ite
                             area_keyword_array = area_keyword_item.split(' ')
                             for area_keyword in area_keyword_array:
                                 area_keyword = util.format_keyword_string(area_keyword)
+                                print("area_keyword, row_text", area_keyword, row_text)
                                 if not area_keyword in row_text:
                                     is_match_area = False
                                     break
@@ -9802,11 +9805,13 @@ def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_ite
             if len(matched_blocks) == 0:
                 matched_blocks = None
                 is_need_refresh = True
+                print("matched_blocks === 0", is_need_refresh)
 
     target_area = util.get_target_item_from_matched_list(matched_blocks, auto_select_mode)
     if not matched_blocks is None:
         if len(matched_blocks) == 0:
             is_need_refresh = True
+            print("matched_blocks2 === 0", is_need_refresh)
             if show_debug_message:
                 print("matched_blocks is empty, is_need_refresh")
 
@@ -9859,6 +9864,7 @@ def ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_ite
                 if is_price_assign_by_bot:
                     break
 
+    print("last statement", is_need_refresh)
     return is_need_refresh, is_price_assign_by_bot, is_reset_query
 
 
@@ -9887,21 +9893,37 @@ def ticketplus_order_expansion_panel(driver, config_dict, current_layout_style):
                 area_keyword_array = json.loads("["+ area_keyword +"]")
             except Exception as exc:
                 area_keyword_array = []
-
             is_reset_query = False
-            for retry_idx in range(2):
-                for area_keyword_item in area_keyword_array:
-                    is_need_refresh, is_price_assign_by_bot, is_reset_query = ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_item, current_layout_style)
-                    if is_reset_query:
-                        break
-                    if not is_need_refresh:
-                        break
-                    else:
-                        print("is_need_refresh for keyword:", area_keyword_item)
+            print("area_keyword_array", area_keyword_array)
 
-                # when reset query, do query again.
-                if not is_reset_query:
+            for area_keyword_item in area_keyword_array:
+                is_need_refresh, is_price_assign_by_bot, is_reset_query = ticketplus_order_expansion_auto_select(driver,
+                                                                                                                 config_dict,
+                                                                                                                 area_keyword_item,
+                                                                                                                 current_layout_style)
+                print("is_need_refresh_outside", is_need_refresh)
+                if is_reset_query:
                     break
+                if not is_need_refresh:
+                    break
+                else:
+                    print("is_need_refresh for keyword:", area_keyword_item)
+
+            # for retry_idx in range(2):
+            #     print("retry_idx", retry_idx)
+            #     for area_keyword_item in area_keyword_array:
+            #         is_need_refresh, is_price_assign_by_bot, is_reset_query = ticketplus_order_expansion_auto_select(driver, config_dict, area_keyword_item, current_layout_style)
+            #         print("is_need_refresh_outside", is_need_refresh)
+            #         if is_reset_query:
+            #             break
+            #         if not is_need_refresh:
+            #             break
+            #         else:
+            #             print("is_need_refresh for keyword:", area_keyword_item)
+            #
+            #     # when reset query, do query again.
+            #     if not is_reset_query:
+            #         break
 
         else:
             # empty keyword, match all.
@@ -10227,20 +10249,22 @@ svgToPng(svg, (imgData) => {
 }); }
                         """ % (image_id))
                     if not form_verifyCode_base64 is None:
-                        img_base64 = base64.b64decode(form_verifyCode_base64.split(',')[1])
+                        # img_base64 = base64.b64decode(form_verifyCode_base64.split(',')[1])
+                        img_base64 = form_verifyCode_base64.split(',')[1]
                 except Exception as exc:
                     if show_debug_message:
                         print("canvas exception:", str(exc))
                     pass
         if not img_base64 is None:
             try:
-                ocr_answer = ocr.classification(img_base64)
+                # ocr_answer = ocr.classification(img_base64)
+                ocr_answer = yes_captcha.image_to_text(img_base64)
             except Exception as exc:
                 pass
 
-        ocr_done_time = time.time()
-        ocr_elapsed_time = ocr_done_time - ocr_start_time
-        print("ocr elapsed time:", "{:.3f}".format(ocr_elapsed_time))
+        # ocr_done_time = time.time()
+        # ocr_elapsed_time = ocr_done_time - ocr_start_time
+        # print("ocr elapsed time:", "{:.3f}".format(ocr_elapsed_time))
     else:
         print("ddddocr is None")
 
