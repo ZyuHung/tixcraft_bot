@@ -5641,9 +5641,10 @@ def hkticketing_login(driver, account, password):
     return ret
 
 def play_sound_while_ordering(config_dict):
-    app_root = util.get_app_root()
-    captcha_sound_filename = os.path.join(app_root, config_dict["advanced"]["play_sound"]["filename"].strip())
-    util.play_mp3_async(captcha_sound_filename)
+    return
+    # app_root = util.get_app_root()
+    # captcha_sound_filename = os.path.join(app_root, config_dict["advanced"]["play_sound"]["filename"].strip())
+    # util.play_mp3_async(captcha_sound_filename)
 
 # purpose: check alert poped.
 # PS: current version not enable...

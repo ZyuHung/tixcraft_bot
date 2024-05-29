@@ -221,7 +221,8 @@ def save_url_to_file(remote_url, CONST_MAXBOT_ANSWER_ONLINE_FILE, force_write = 
 
 
 def play_mp3_async(sound_filename):
-    threading.Thread(target=play_mp3, args=(sound_filename,)).start()
+    return
+    # threading.Thread(target=play_mp3, args=(sound_filename,)).start()
 
 def play_mp3(sound_filename):
     from playsound import playsound
@@ -1986,6 +1987,7 @@ def launch_maxbot(script_name="chrome_tixcraft", filename="", homepage="", kktix
         try:
             print('try', interpreter_binary)
             cmd_array = [interpreter_binary, script_name + '.py'] + cmd_argument
+            print('cmd:', cmd_array)
             s=subprocess.Popen(cmd_array, cwd=working_dir)
         except Exception as exc:
             print('try', interpreter_binary_alt)

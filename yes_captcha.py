@@ -1,6 +1,6 @@
 import requests
 
-API_KEY = "9dee83f6880892820b744ae6204b432c86d30a2026469"
+API_KEY = "a977c568fd3e3c4af4cd0f9d1a986c2a0244b2d426469"
 
 
 def image_to_text(base64):
